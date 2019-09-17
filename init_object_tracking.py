@@ -11,6 +11,7 @@ blue_low = np.array([75, 75, 128])
 blue_high = np.array([105, 255, 255])
 
 
+# Given a HSV colour range, returns the list of contours
 def get_colour_contours(img, range_low, range_high):
     hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv_img, range_low, range_high)
@@ -19,34 +20,16 @@ def get_colour_contours(img, range_low, range_high):
     return contours
 
 
-# TODO change to return a list, ordered with largest contour first
+# Given a list of contours, returns that list in order of descending size
 def get_largest_contours(contours):
-    # plan: zip with area, then sort on area, then extract only contours
-    largest_area = 0
-    largest_index = -1
-    snd_largest_area = 0
-    snd_largest_index = -1
 
-    i = 0
-    total_contours = len(contours)
-    while i < total_contours:
-        area = cv2.contourArea(contours[i])
-        if area > largest_area:
-            snd_largest_area = largest_area
-            snd_largest_index = largest_index
-            largest_area = area
-            largest_index = i
-        elif area > snd_largest_area:
-            snd_largest_area = area
-            snd_largest_index = i
-        i += 1
+    ordered_contours = list(map(lambda c: (c, cv2.contourArea(c)), contours))
+    ordered_contours.sort(key=lambda p: p[1], reverse=True)
 
-    if snd_largest_index is -1:
-        return contours[largest_index], None
-    else:
-        return contours[largest_index], contours[snd_largest_index]
+    return list(map(lambda p: p[0], contours))
 
 
+# Given a list of arrays, flattens them and returns a single array
 def flatten(arr):
     new_arr = []
     for a in arr:
