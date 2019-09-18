@@ -68,6 +68,9 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
     #   When one succeeds
     #       solvePnP
     #       return result of solvePnP until have better idea
+
+    return
+
     green_contour, pixel_points = circle_largest_green_region(img)
 
     if not pixel_points:
