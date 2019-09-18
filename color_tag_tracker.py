@@ -68,49 +68,7 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
     #   When one succeeds
     #       solvePnP
     #       return result of solvePnP until have better idea
+    contours = get_colour_contours(img, green_low, green_high)
+
 
     return
-
-    green_contour, pixel_points = circle_largest_green_region(img)
-
-    if not pixel_points:
-        green_frame = img.copy()
-
-        cv2.drawContours(green_frame, [green_contour], -1, (0, 255, 0), 3)
-        green_frame = draw_debug_circles(green_frame, pixel_points)
-
-        if display_img:
-            display_images(img, green_frame)
-        return [-1, -1], green_frame
-
-    obj_3d_coords = circle_solve_pnp(pixel_points, cam_mat, cam_dist)
-
-    if debug_txt:
-        print("circle vector")
-        print(obj_3d_coords)
-
-    blue_circs_conts, blue_circs_pts = outline_blue_circles(img)
-
-    highlight_frame = img.copy()
-
-    if green_contour is not None:
-        cv2.drawContours(highlight_frame, [green_contour], -1, (0, 255, 0), 3)
-        highlight_frame = draw_debug_circles(highlight_frame, pixel_points)
-
-    cv2.drawContours(highlight_frame, blue_circs_conts, -1, (255, 255, 0), 3)
-
-    blue_3d_coords = []
-    for c in blue_circs_pts:
-        cv2.circle(highlight_frame, c[0], 4, (0, 0, 0), -1)
-
-        blue_3d_coords.append(circle_solve_pnp(np.float32(c), cam_mat, cam_dist))
-
-    if display_img:
-        display_images(img, highlight_frame)
-
-    if len(blue_3d_coords) is not 2:
-        print("Can't calculate object position")
-        return [-1, -1], highlight_frame
-
-    obj_pos = calc_obj_pos(obj_3d_coords, blue_3d_coords, debug_txt)
-    return obj_pos, highlight_frame
