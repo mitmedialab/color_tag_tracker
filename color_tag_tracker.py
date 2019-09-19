@@ -4,8 +4,8 @@ from time import time
 import math
 
 # TODO generalise ranges later
-green_low = np.array([45, 75, 75])
-green_high = np.array([75, 255, 255])
+green_low = np.array([35, 75, 75])
+green_high = np.array([85, 255, 255])
 
 blue_low = np.array([75, 75, 128])
 blue_high = np.array([105, 255, 255])
@@ -74,6 +74,8 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
         return
 
     contours = get_largest_contours(contours)
+    highlight = img.copy()
+    cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
 
     for contour in contours:
         if len(contour) < 5:
@@ -81,8 +83,8 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 print("Contour too small")
             break
         ellipse = cv2.fitEllipse(contour)
+        print(ellipse)
 
-        highlight = img.copy()
         cv2.ellipse(highlight, ellipse, (0, 0, 255))
 
         display_images(img, highlight)
