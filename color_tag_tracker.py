@@ -51,36 +51,37 @@ def bgr_to_hsv(col):
     return cv2.cvtColor(np.array([[col]]), cv2.COLOR_BGR2HSV)[0, 0]
 
 
-def black_at_coords(img, ellipse, theta):
+def black_at_angle(img, ellipse, theta):
     coords = calc_point_coords(ellipse, theta, ELLIPSE_TO_DOTS_SCALE)
     colour = img[coords[1], coords[0]]
     hsv_colour = bgr_to_hsv(colour)
-    return hsv_colour[2] < 100
+    return hsv_colour[2] < 80
 
 
 def find_first_dot(img, ellipse):
 
     init_angle = 0.
-    while not black_at_coords(img, ellipse, init_angle) and init_angle < 360:
+    while not black_at_angle(img, ellipse, init_angle) and init_angle < 360:
         init_angle += 10
 
     if init_angle is 360:
         return None
 
+    # TODO set upper bound on angle difference
     left_angle = init_angle
-    while black_at_coords(img, ellipse, left_angle - 5):
+    while black_at_angle(img, ellipse, left_angle - 5):
         left_angle -= 5
-    while black_at_coords(img, ellipse, left_angle - 1):
+    while black_at_angle(img, ellipse, left_angle - 1):
         left_angle -= 1
-    while black_at_coords(img, ellipse, left_angle - 0.1):
+    while black_at_angle(img, ellipse, left_angle - 0.1):
         left_angle -= 0.1
 
     right_angle = init_angle
-    while black_at_coords(img, ellipse, right_angle + 5):
+    while black_at_angle(img, ellipse, right_angle + 5):
         right_angle += 5
-    while black_at_coords(img, ellipse, right_angle + 1):
+    while black_at_angle(img, ellipse, right_angle + 1):
         right_angle += 1
-    while black_at_coords(img, ellipse, right_angle + 0.1):
+    while black_at_angle(img, ellipse, right_angle + 0.1):
         right_angle += 0.1
 
     return (left_angle + right_angle) / 2
