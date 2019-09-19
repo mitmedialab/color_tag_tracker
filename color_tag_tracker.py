@@ -83,7 +83,10 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 print("Contour too small")
             break
         ellipse = cv2.fitEllipse(contour)
-        print(ellipse)
+        print('Center: ', ellipse[0])
+        print('Major axis: ', ellipse[1][1])
+        print('Minor axis: ', ellipse[1][0])
+        print('Angle: ', ellipse[2])
 
         cv2.ellipse(highlight, ellipse, (0, 0, 255))
 
