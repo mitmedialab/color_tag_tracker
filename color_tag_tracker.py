@@ -15,7 +15,7 @@ blue_high = np.array([105, 255, 255])
 def get_colour_contours(img, range_low, range_high):
     hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv_img, range_low, range_high)
-    contours, hierarchy = cv2.findContours(mask, cv2.RETR_TREE,
+    _, contours, _ = cv2.findContours(mask, cv2.RETR_TREE,
                                            cv2.CHAIN_APPROX_SIMPLE)
     return contours
 
@@ -25,8 +25,7 @@ def get_largest_contours(contours):
 
     ordered_contours = list(map(lambda c: (c, cv2.contourArea(c)), contours))
     ordered_contours.sort(key=lambda p: p[1], reverse=True)
-
-    return list(map(lambda p: p[0], contours))
+    return list(map(lambda p: p[0], ordered_contours))
 
 
 # Given a list of arrays, flattens them and returns a single array
@@ -68,46 +67,25 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
     #   When one succeeds
     #       solvePnP
     #       return result of solvePnP until have better idea
-    green_contour, pixel_points = circle_largest_green_region(img)
+    contours = get_colour_contours(img, green_low, green_high)
+    if not contours:
+        if debug_txt:
+            print("No contours found")
+        return
 
-    if not pixel_points:
-        green_frame = img.copy()
+    contours = get_largest_contours(contours)
 
-        cv2.drawContours(green_frame, [green_contour], -1, (0, 255, 0), 3)
-        green_frame = draw_debug_circles(green_frame, pixel_points)
+    for contour in contours:
+        if len(contour) < 5:
+            if debug_txt:
+                print("Contour too small")
+            break
+        ellipse = cv2.fitEllipse(contour)
 
-        if display_img:
-            display_images(img, green_frame)
-        return [-1, -1], green_frame
+        highlight = img.copy()
+        cv2.ellipse(highlight, ellipse, (0, 0, 255))
 
-    obj_3d_coords = circle_solve_pnp(pixel_points, cam_mat, cam_dist)
+        display_images(img, highlight)
+        break
 
-    if debug_txt:
-        print("circle vector")
-        print(obj_3d_coords)
-
-    blue_circs_conts, blue_circs_pts = outline_blue_circles(img)
-
-    highlight_frame = img.copy()
-
-    if green_contour is not None:
-        cv2.drawContours(highlight_frame, [green_contour], -1, (0, 255, 0), 3)
-        highlight_frame = draw_debug_circles(highlight_frame, pixel_points)
-
-    cv2.drawContours(highlight_frame, blue_circs_conts, -1, (255, 255, 0), 3)
-
-    blue_3d_coords = []
-    for c in blue_circs_pts:
-        cv2.circle(highlight_frame, c[0], 4, (0, 0, 0), -1)
-
-        blue_3d_coords.append(circle_solve_pnp(np.float32(c), cam_mat, cam_dist))
-
-    if display_img:
-        display_images(img, highlight_frame)
-
-    if len(blue_3d_coords) is not 2:
-        print("Can't calculate object position")
-        return [-1, -1], highlight_frame
-
-    obj_pos = calc_obj_pos(obj_3d_coords, blue_3d_coords, debug_txt)
-    return obj_pos, highlight_frame
+    return
