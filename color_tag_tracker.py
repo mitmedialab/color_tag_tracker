@@ -28,6 +28,25 @@ def get_largest_contours(contours):
     return list(map(lambda p: p[0], ordered_contours))
 
 
+def calc_point_coords(ellipse, theta_2, scale=1):
+    center, axes, theta_1 = ellipse
+    maj_axis_len, min_axis_len = axes
+    maj_axis_len /= 2
+    min_axis_len /= 2
+
+    sin_theta_1 = math.sin(theta_1)
+    cos_theta_1 = math.cos(theta_1)
+
+    maj_axis = (sin_theta_1, -cos_theta_1) * maj_axis_len * scale
+    min_axis = (cos_theta_1, sin_theta_1) * min_axis_len * scale
+
+    return center + maj_axis * math.cos(theta_2) + min_axis * math.sin(theta_2)
+
+
+def find_first_dot(img, ellipse):
+    return
+
+
 # Given a list of arrays, flattens them and returns a single array
 def flatten(arr):
     new_arr = []
@@ -75,7 +94,6 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
     contours = get_largest_contours(contours)
     highlight = img.copy()
-    cv2.drawContours(img, contours, -1, (0, 255, 0), 3)
 
     for contour in contours:
         if len(contour) < 5:
