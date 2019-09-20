@@ -164,6 +164,15 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 print("Failed to decode tag")
             continue
 
+        dot_id = 0
+        for i in range(5):
+            angle = 75 - i * 15
+            if black_at_angle(img, ellipse, top_dot_angle + angle):
+                dot_id += 2 ** i
+
+        print('dot_id: ', dot_id)
+        print()
+
         if display_img:
             highlight = img.copy()
 
