@@ -62,23 +62,23 @@ def find_first_dot(img, ellipse):
 
     init_angle = 0.
     while not black_at_angle(img, ellipse, init_angle) and init_angle < 360:
-        init_angle += 10
+        init_angle += 5
 
     if init_angle is 360:
         return None
 
     # TODO set upper bound on angle difference
     left_angle = init_angle
-    while black_at_angle(img, ellipse, left_angle - 5):
-        left_angle -= 5
+    while black_at_angle(img, ellipse, left_angle - 2):
+        left_angle -= 2
     while black_at_angle(img, ellipse, left_angle - 1):
         left_angle -= 1
     while black_at_angle(img, ellipse, left_angle - 0.1):
         left_angle -= 0.1
 
     right_angle = init_angle
-    while black_at_angle(img, ellipse, right_angle + 5):
-        right_angle += 5
+    while black_at_angle(img, ellipse, right_angle + 2):
+        right_angle += 2
     while black_at_angle(img, ellipse, right_angle + 1):
         right_angle += 1
     while black_at_angle(img, ellipse, right_angle + 0.1):
