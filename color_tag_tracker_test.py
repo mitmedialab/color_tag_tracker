@@ -15,6 +15,6 @@ for i in range(frames):
     if i % 50 is 0:
         print(i)
     _, image = camera.read()
-    find_tag(image, cam_mtx, cam_dist, debug_txt=True, display_img=False)
+    find_tag(image, cam_mtx, cam_dist, debug_txt=True, display_img=True)
 
 print("Finished test")
