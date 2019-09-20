@@ -4,11 +4,13 @@ from time import time
 import math
 
 # TODO generalise ranges later
-green_low = np.array([45, 75, 75])
-green_high = np.array([75, 255, 255])
+green_low = np.array([35, 75, 75])
+green_high = np.array([85, 255, 255])
 
 blue_low = np.array([75, 75, 128])
 blue_high = np.array([105, 255, 255])
+
+ELLIPSE_TO_DOTS_SCALE = 1.125
 
 
 # Given a HSV colour range, returns the list of contours
@@ -26,6 +28,63 @@ def get_largest_contours(contours):
     ordered_contours = list(map(lambda c: (c, cv2.contourArea(c)), contours))
     ordered_contours.sort(key=lambda p: p[1], reverse=True)
     return list(map(lambda p: p[0], ordered_contours))
+
+
+def calc_point_coords(ellipse, theta_2, scale=1.):
+    center, axes, theta_1 = ellipse
+    min_axis_len, maj_axis_len = axes
+    maj_axis_len /= 2
+    min_axis_len /= 2
+    theta_1 = math.radians(theta_1)
+    theta_2 = math.radians(theta_2)
+
+    sin_theta_1 = math.sin(theta_1)
+    cos_theta_1 = math.cos(theta_1)
+
+    maj_axis = np.array([sin_theta_1, -cos_theta_1]) * maj_axis_len * scale
+    min_axis = np.array([cos_theta_1, sin_theta_1]) * min_axis_len * scale
+
+    return tuple((np.array(center) + maj_axis * math.cos(theta_2) + min_axis * math.sin(theta_2)).astype(int))
+
+
+def bgr_to_hsv(col):
+    return cv2.cvtColor(np.array([[col]]), cv2.COLOR_BGR2HSV)[0, 0]
+
+
+def black_at_angle(img, ellipse, theta):
+    coords = calc_point_coords(ellipse, theta, ELLIPSE_TO_DOTS_SCALE)
+    colour = img[coords[1], coords[0]]
+    hsv_colour = bgr_to_hsv(colour)
+    return hsv_colour[2] < 80
+
+
+def find_first_dot(img, ellipse):
+
+    init_angle = 0.
+    while not black_at_angle(img, ellipse, init_angle) and init_angle < 360:
+        init_angle += 10
+
+    if init_angle is 360:
+        return None
+
+    # TODO set upper bound on angle difference
+    left_angle = init_angle
+    while black_at_angle(img, ellipse, left_angle - 5):
+        left_angle -= 5
+    while black_at_angle(img, ellipse, left_angle - 1):
+        left_angle -= 1
+    while black_at_angle(img, ellipse, left_angle - 0.1):
+        left_angle -= 0.1
+
+    right_angle = init_angle
+    while black_at_angle(img, ellipse, right_angle + 5):
+        right_angle += 5
+    while black_at_angle(img, ellipse, right_angle + 1):
+        right_angle += 1
+    while black_at_angle(img, ellipse, right_angle + 0.1):
+        right_angle += 0.1
+
+    return (left_angle + right_angle) / 2
 
 
 # Given a list of arrays, flattens them and returns a single array
@@ -74,6 +133,7 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
         return
 
     contours = get_largest_contours(contours)
+    highlight = img.copy()
 
     for contour in contours:
         if len(contour) < 5:
@@ -81,9 +141,15 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 print("Contour too small")
             break
         ellipse = cv2.fitEllipse(contour)
+        print('Center: ', ellipse[0])
+        print('Major axis: ', ellipse[1][1])
+        print('Minor axis: ', ellipse[1][0])
+        print('Angle: ', ellipse[2])
 
-        highlight = img.copy()
+        first_dot_angle = find_first_dot(img, ellipse)
+
         cv2.ellipse(highlight, ellipse, (0, 0, 255))
+        cv2.circle(highlight, calc_point_coords(ellipse, first_dot_angle, ELLIPSE_TO_DOTS_SCALE), 1, (255, 255, 0))
 
         display_images(img, highlight)
         break
