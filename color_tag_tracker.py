@@ -53,37 +53,48 @@ def bgr_to_hsv(col):
 
 def black_at_angle(img, ellipse, theta):
     coords = calc_point_coords(ellipse, theta, ELLIPSE_TO_DOTS_SCALE)
+    if coords[1] >= img.shape[0] or coords[1] < 0 or coords[0] >= img.shape[1] or coords[0] < 0:
+        return False
     colour = img[coords[1], coords[0]]
     hsv_colour = bgr_to_hsv(colour)
-    return hsv_colour[2] < 80
+    return hsv_colour[2] < 165
 
 
-def find_first_dot(img, ellipse):
+def find_first_dot(img, ellipse, debug_txt):
 
     init_angle = 0.
     while not black_at_angle(img, ellipse, init_angle) and init_angle < 360:
         init_angle += 5
 
-    if init_angle is 360:
+    if init_angle >= 360:
+        if debug_txt:
+            print("No dot found")
         return None
 
-    # TODO set upper bound on angle difference
     left_angle = init_angle
-    while black_at_angle(img, ellipse, left_angle - 2):
+    while black_at_angle(img, ellipse, left_angle - 2) and init_angle - left_angle < 15:
         left_angle -= 2
-    while black_at_angle(img, ellipse, left_angle - 1):
+    while black_at_angle(img, ellipse, left_angle - 1) and init_angle - left_angle < 15:
         left_angle -= 1
-    while black_at_angle(img, ellipse, left_angle - 0.1):
+    while black_at_angle(img, ellipse, left_angle - 0.1) and init_angle - left_angle < 15:
         left_angle -= 0.1
 
     right_angle = init_angle
-    while black_at_angle(img, ellipse, right_angle + 2):
+    while black_at_angle(img, ellipse, right_angle + 2) and right_angle - init_angle < 15:
         right_angle += 2
-    while black_at_angle(img, ellipse, right_angle + 1):
+    while black_at_angle(img, ellipse, right_angle + 1) and right_angle - init_angle < 15:
         right_angle += 1
-    while black_at_angle(img, ellipse, right_angle + 0.1):
+    while black_at_angle(img, ellipse, right_angle + 0.1) and right_angle - init_angle < 15:
         right_angle += 0.1
 
+    if right_angle - left_angle > 13:
+        if debug_txt:
+            print("Dot too big")
+        return None
+    print("init angle: ", init_angle)
+    print("left angle: ", left_angle)
+    print("right angle: ", right_angle)
+    print()
     return (left_angle + right_angle) / 2
 
 
@@ -141,15 +152,14 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 print("Contour too small")
             break
         ellipse = cv2.fitEllipse(contour)
-        print('Center: ', ellipse[0])
-        print('Major axis: ', ellipse[1][1])
-        print('Minor axis: ', ellipse[1][0])
-        print('Angle: ', ellipse[2])
 
-        first_dot_angle = find_first_dot(img, ellipse)
+        first_dot_angle = find_first_dot(img, ellipse, debug_txt)
+        if first_dot_angle is None:
+            continue
 
         cv2.ellipse(highlight, ellipse, (0, 0, 255))
-        cv2.circle(highlight, calc_point_coords(ellipse, first_dot_angle, ELLIPSE_TO_DOTS_SCALE), 1, (255, 255, 0))
+        cv2.circle(highlight, calc_point_coords(ellipse, 0, ELLIPSE_TO_DOTS_SCALE), 3, (0, 255, 0))
+        cv2.circle(highlight, calc_point_coords(ellipse, first_dot_angle, ELLIPSE_TO_DOTS_SCALE), 3, (0, 0, 255))
 
         display_images(img, highlight)
         break
