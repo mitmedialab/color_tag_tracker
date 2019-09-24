@@ -1,6 +1,5 @@
 import cv2
 import numpy as np
-from time import time
 import math
 
 # TODO generalise ranges later
@@ -10,17 +9,29 @@ green_high = np.array([85, 255, 255])
 blue_low = np.array([75, 75, 128])
 blue_high = np.array([105, 255, 255])
 
-ELLIPSE_TO_DOTS_SCALE = 1.125
+ELLIPSE_TO_DOTS_SCALE = 1.25
 
 CM_TO_DOT_CENTER = 4.5
+
+ANGLE_BETWEEN_DOTS = 22.5
+
+SIZE_OF_DOT = 17.5
 
 
 # Given a HSV colour range, returns the list of contours
 def get_colour_contours(img, range_low, range_high):
     hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     mask = cv2.inRange(hsv_img, range_low, range_high)
-    _, contours, _ = cv2.findContours(mask, cv2.RETR_TREE,
-                                           cv2.CHAIN_APPROX_SIMPLE)
+    major = cv2.__version__.split('.')[0]
+    contours = None
+    if major == '3':
+        _, contours, _ = cv2.findContours(mask,
+                                      cv2.RETR_TREE,
+                                      cv2.CHAIN_APPROX_SIMPLE)
+    else:
+        contours, _ = cv2.findContours(mask,
+                                      cv2.RETR_TREE,
+                                      cv2.CHAIN_APPROX_SIMPLE)
     return contours
 
 
@@ -89,11 +100,24 @@ def find_first_dot(img, ellipse, debug_txt):
     while black_at_angle(img, ellipse, right_angle + 0.1) and right_angle - init_angle < 15:
         right_angle += 0.1
 
-    if right_angle - left_angle > 13:
+    if right_angle - left_angle > SIZE_OF_DOT + 5:
         if debug_txt:
             print("Dot too big")
         return None
     return (left_angle + right_angle) / 2
+
+
+def decode_tag_id(img, ellipse, top_dot_angle):
+    dot_id = 0
+    if black_at_angle(img, ellipse, top_dot_angle + 67.25):
+        dot_id += 1
+    if black_at_angle(img, ellipse, top_dot_angle + 45):
+        dot_id += 2
+    if black_at_angle(img, ellipse, top_dot_angle - 45):
+        dot_id += 4
+    if black_at_angle(img, ellipse, top_dot_angle - 67.25):
+        dot_id += 8
+    return dot_id
 
 
 # Given a list of arrays, flattens them and returns a single array
@@ -143,6 +167,14 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
     contours = get_largest_contours(contours)
 
+    contour_img = img.copy()
+    cv2.drawContours(contour_img, contours, -1, (255, 255, 0))
+
+
+    cv2.imshow('cam input with highlighted contours', contour_img)
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        raise Exception("display cancelled 2")
+
     for contour in contours:
         if len(contour) < 5:
             if debug_txt:
@@ -156,20 +188,26 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
         top_dot_angle = first_dot_angle
 
-        while not (black_at_angle(img, ellipse, top_dot_angle) and black_at_angle(img, ellipse, top_dot_angle + 90)) and top_dot_angle < first_dot_angle + 360:
-            top_dot_angle += 15
+        while not (black_at_angle(img, ellipse, top_dot_angle) and
+                   black_at_angle(img, ellipse, top_dot_angle + 180))\
+                and top_dot_angle < first_dot_angle + 360:
+            top_dot_angle += ANGLE_BETWEEN_DOTS
 
         if top_dot_angle >= first_dot_angle + 360:
             if debug_txt:
                 print("Failed to decode tag")
             continue
 
-        dot_id = 0
-        for i in range(5):
-            angle = 75 - i * 15
-            if black_at_angle(img, ellipse, top_dot_angle + angle):
-                dot_id += 2 ** i
+        if black_at_angle(img, ellipse, top_dot_angle + 90):
+            top_dot_angle += 90
+        elif black_at_angle(img, ellipse, top_dot_angle - 90):
+            top_dot_angle -= 90
+        else:
+            if debug_txt:
+                print("Failed to decode tag after finding dots on opposite sides of tag.")
+            continue
 
+        dot_id = decode_tag_id(img, ellipse, top_dot_angle)
         print('dot_id: ', dot_id)
         print()
 
@@ -179,8 +217,11 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             cv2.ellipse(highlight, ellipse, (0, 0, 255))
             cv2.circle(highlight, calc_point_coords(ellipse, top_dot_angle, ELLIPSE_TO_DOTS_SCALE), 3, (0, 255, 0))
             cv2.circle(highlight, calc_point_coords(ellipse, top_dot_angle + 90, ELLIPSE_TO_DOTS_SCALE), 3, (0, 0, 255))
+            cv2.circle(highlight, calc_point_coords(ellipse, top_dot_angle - 90, ELLIPSE_TO_DOTS_SCALE), 3, (255, 255, 0))
 
-            display_images(img, highlight)
+            cv2.imshow('cam input with highlighted tag', highlight)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                raise Exception("display cancelled 2")
 
         return
         # TODO need >= 4 points, redesign tags
