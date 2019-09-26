@@ -7,7 +7,7 @@ frames = 5000
 cam_mtx = np.load('mtx.npy')
 cam_dist = np.load('dist.npy')
 
-camera = cv2.VideoCapture(1)
+camera = cv2.VideoCapture(0)
 
 print("Starting test")
 

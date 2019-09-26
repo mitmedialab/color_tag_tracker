@@ -15,7 +15,7 @@ CM_TO_DOT_CENTER = 4.5
 
 ANGLE_BETWEEN_DOTS = 22.5
 
-SIZE_OF_DOT = 17.5
+WIDTH_OF_DOT = 17.5
 
 
 # Given a HSV colour range, returns the list of contours
@@ -64,13 +64,57 @@ def bgr_to_hsv(col):
     return cv2.cvtColor(np.array([[col]]), cv2.COLOR_BGR2HSV)[0, 0]
 
 
-def black_at_angle(img, ellipse, theta):
-    coords = calc_point_coords(ellipse, theta, ELLIPSE_TO_DOTS_SCALE)
+def black_at_angle(img, ellipse, theta, distance=ELLIPSE_TO_DOTS_SCALE):
+    coords = calc_point_coords(ellipse, theta, distance)
     if coords[1] >= img.shape[0] or coords[1] < 0 or coords[0] >= img.shape[1] or coords[0] < 0:
         return False
     colour = img[coords[1], coords[0]]
     hsv_colour = bgr_to_hsv(colour)
-    return hsv_colour[2] < 165
+    return hsv_colour[2] < 180 and hsv_colour[1] < 100
+
+
+def find_dot_centre(img, ellipse, init_angle, init_scale, debug_txt):
+    left_angle = init_angle
+    while black_at_angle(img, ellipse, left_angle - 2) and init_angle - left_angle < WIDTH_OF_DOT:
+        left_angle -= 2
+    while black_at_angle(img, ellipse, left_angle - 1) and init_angle - left_angle < WIDTH_OF_DOT:
+        left_angle -= 1
+    while black_at_angle(img, ellipse, left_angle - 0.1) and init_angle - left_angle < WIDTH_OF_DOT:
+        left_angle -= 0.1
+
+    right_angle = init_angle
+    while black_at_angle(img, ellipse, right_angle + 2) and right_angle - init_angle < WIDTH_OF_DOT:
+        right_angle += 2
+    while black_at_angle(img, ellipse, right_angle + 1) and right_angle - init_angle < WIDTH_OF_DOT:
+        right_angle += 1
+    while black_at_angle(img, ellipse, right_angle + 0.1) and right_angle - init_angle < WIDTH_OF_DOT:
+        right_angle += 0.1
+
+    if right_angle - left_angle > WIDTH_OF_DOT + 5:
+        if debug_txt:
+            print("Dot too big")
+        return None, None
+    true_angle = (left_angle + right_angle) / 2
+
+    scale_to_top = init_scale
+    while black_at_angle(img, ellipse, true_angle, scale_to_top + 0.05) and scale_to_top < 1.75:
+        scale_to_top += 0.05
+    while black_at_angle(img, ellipse, true_angle, scale_to_top + 0.02) and scale_to_top < 1.75:
+        scale_to_top += 0.02
+    while black_at_angle(img, ellipse, true_angle, scale_to_top + 0.01) and scale_to_top < 1.75:
+        scale_to_top += 0.01
+
+    scale_to_bottom = init_scale
+    while black_at_angle(img, ellipse, true_angle, scale_to_bottom - 0.05) and scale_to_bottom > 1:
+        scale_to_bottom -= 0.05
+    while black_at_angle(img, ellipse, true_angle, scale_to_bottom - 0.02) and scale_to_bottom > 1:
+        scale_to_bottom -= 0.02
+    while black_at_angle(img, ellipse, true_angle, scale_to_bottom - 0.01) and scale_to_bottom > 1:
+        scale_to_bottom -= 0.01
+
+    true_scale = (scale_to_top + scale_to_bottom) / 2
+
+    return true_angle, true_scale
 
 
 def find_first_dot(img, ellipse, debug_txt):
@@ -82,29 +126,15 @@ def find_first_dot(img, ellipse, debug_txt):
     if init_angle >= 360:
         if debug_txt:
             print("No dot found")
-        return None
+        return None, None
 
-    left_angle = init_angle
-    while black_at_angle(img, ellipse, left_angle - 2) and init_angle - left_angle < 15:
-        left_angle -= 2
-    while black_at_angle(img, ellipse, left_angle - 1) and init_angle - left_angle < 15:
-        left_angle -= 1
-    while black_at_angle(img, ellipse, left_angle - 0.1) and init_angle - left_angle < 15:
-        left_angle -= 0.1
+    angle, scale = find_dot_centre(img, ellipse, init_angle, ELLIPSE_TO_DOTS_SCALE, debug_txt)
 
-    right_angle = init_angle
-    while black_at_angle(img, ellipse, right_angle + 2) and right_angle - init_angle < 15:
-        right_angle += 2
-    while black_at_angle(img, ellipse, right_angle + 1) and right_angle - init_angle < 15:
-        right_angle += 1
-    while black_at_angle(img, ellipse, right_angle + 0.1) and right_angle - init_angle < 15:
-        right_angle += 0.1
-
-    if right_angle - left_angle > SIZE_OF_DOT + 5:
+    if angle is None:
         if debug_txt:
-            print("Dot too big")
-        return None
-    return (left_angle + right_angle) / 2
+            print("First dot had invalid size")
+        return None, None
+    return angle, scale
 
 
 def decode_tag_id(img, ellipse, top_dot_angle):
@@ -169,9 +199,8 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
     contour_img = img.copy()
     cv2.drawContours(contour_img, contours, -1, (255, 255, 0))
-
-
     cv2.imshow('cam input with highlighted contours', contour_img)
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
         raise Exception("display cancelled 2")
 
@@ -182,14 +211,14 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             break
         ellipse = cv2.fitEllipse(contour)
 
-        first_dot_angle = find_first_dot(img, ellipse, debug_txt)
+        first_dot_angle, first_dot_scale = find_first_dot(img, ellipse, debug_txt)
         if first_dot_angle is None:
             continue
 
         top_dot_angle = first_dot_angle
 
-        while not (black_at_angle(img, ellipse, top_dot_angle) and
-                   black_at_angle(img, ellipse, top_dot_angle + 180))\
+        while not (black_at_angle(img, ellipse, top_dot_angle, distance=first_dot_scale) and
+                   black_at_angle(img, ellipse, top_dot_angle + 180, distance=first_dot_scale))\
                 and top_dot_angle < first_dot_angle + 360:
             top_dot_angle += ANGLE_BETWEEN_DOTS
 
@@ -198,9 +227,9 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 print("Failed to decode tag")
             continue
 
-        if black_at_angle(img, ellipse, top_dot_angle + 90):
+        if black_at_angle(img, ellipse, top_dot_angle + 90, distance=first_dot_scale):
             top_dot_angle += 90
-        elif black_at_angle(img, ellipse, top_dot_angle - 90):
+        elif black_at_angle(img, ellipse, top_dot_angle - 90, distance=first_dot_scale):
             top_dot_angle -= 90
         else:
             if debug_txt:
@@ -215,9 +244,9 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             highlight = img.copy()
 
             cv2.ellipse(highlight, ellipse, (0, 0, 255))
-            cv2.circle(highlight, calc_point_coords(ellipse, top_dot_angle, ELLIPSE_TO_DOTS_SCALE), 3, (0, 255, 0))
-            cv2.circle(highlight, calc_point_coords(ellipse, top_dot_angle + 90, ELLIPSE_TO_DOTS_SCALE), 3, (0, 0, 255))
-            cv2.circle(highlight, calc_point_coords(ellipse, top_dot_angle - 90, ELLIPSE_TO_DOTS_SCALE), 3, (255, 255, 0))
+            cv2.circle(highlight, calc_point_coords(ellipse, top_dot_angle, first_dot_scale), 3, (0, 255, 0))
+            cv2.circle(highlight, calc_point_coords(ellipse, top_dot_angle + 90, first_dot_scale), 3, (0, 0, 255))
+            cv2.circle(highlight, calc_point_coords(ellipse, top_dot_angle - 90, first_dot_scale), 3, (255, 255, 0))
 
             cv2.imshow('cam input with highlighted tag', highlight)
             if cv2.waitKey(1) & 0xFF == ord('q'):
