@@ -15,6 +15,14 @@ for i in range(frames):
     if i % 50 is 0:
         print(i)
     _, image = camera.read()
-    find_tag(image, cam_mtx, cam_dist, debug_txt=True, display_img=True)
+    res = find_tag(image, cam_mtx, cam_dist, display_img=True)
+    if res is None:
+        continue
+    tag_id, r_vec, t_vec = res
+    print('Tag id: ' + str(tag_id))
+    print('Rotation vector:')
+    print(r_vec)
+    print('Translation vector:')
+    print(t_vec)
 
 print("Finished test")
