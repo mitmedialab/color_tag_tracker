@@ -316,7 +316,7 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             break
         coloured_ellipse = cv2.fitEllipse(contour)
 
-        ellipse = get_matching_ellipse(coloured_ellipse, white_ellipses)
+        matched_ellipse = get_matching_ellipse(coloured_ellipse, white_ellipses)
 
         # if display_img:
         #     ellipse_img = img.copy()
@@ -328,71 +328,74 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
         #     if cv2.waitKey(1000) & 0xFF == ord('q'):
         #         raise Exception("ellipse cancelled 2")
 
-        if ellipse is None:
-            ellipse = coloured_ellipse
-
-        first_dot_angle, first_dot_scale = find_first_dot(img, ellipse, debug_txt)
-        if first_dot_angle is None:
-            continue
-
-        top_dot_angle = first_dot_angle
-
-        while not (black_at_angle(img, ellipse, top_dot_angle, distance=first_dot_scale) and
-                   black_at_angle(img, ellipse, top_dot_angle + 180, distance=first_dot_scale))\
-                and top_dot_angle < first_dot_angle + 360:
-            top_dot_angle += ANGLE_BETWEEN_DOTS
-
-        if top_dot_angle >= first_dot_angle + 360:
-            if debug_txt:
-                print("Failed to decode tag")
-            continue
-
-        if black_at_angle(img, ellipse, top_dot_angle + 90, distance=first_dot_scale):
-            top_dot_angle += 90
-        elif black_at_angle(img, ellipse, top_dot_angle - 90, distance=first_dot_scale):
-            top_dot_angle -= 90
+        if matched_ellipse is None:
+            ellipses_to_test = [coloured_ellipse]
         else:
-            if debug_txt:
-                print("Failed to decode tag after finding dots on opposite sides of tag.")
-            continue
+            ellipses_to_test = [matched_ellipse, coloured_ellipse]
 
-        if not check_bottom_of_tag(img, ellipse, top_dot_angle, first_dot_scale):
-            if debug_txt:
-                print("Failed to decode tag, bottom of tag not valid.")
-            continue
+        for e in ellipses_to_test:
+            first_dot_angle, first_dot_scale = find_first_dot(img, e, debug_txt)
+            if first_dot_angle is None:
+                continue
 
-        dot_id = decode_tag_id(img, ellipse, top_dot_angle)
+            top_dot_angle = first_dot_angle
 
-        top_dot = find_dot_coords(img, ellipse, top_dot_angle, first_dot_scale, debug_txt)
-        right_dot = find_dot_coords(img, ellipse, top_dot_angle + 90, first_dot_scale, debug_txt)
-        bottom_right_dot = find_dot_coords(img, ellipse, top_dot_angle + 157.5, first_dot_scale, debug_txt)
-        bottom_left_dot = find_dot_coords(img, ellipse, top_dot_angle + 202.5, first_dot_scale, debug_txt)
-        left_dot = find_dot_coords(img, ellipse, top_dot_angle + 270, first_dot_scale, debug_txt)
+            while not (black_at_angle(img, e, top_dot_angle, distance=first_dot_scale) and
+                       black_at_angle(img, e, top_dot_angle + 180, distance=first_dot_scale))\
+                    and top_dot_angle < first_dot_angle + 360:
+                top_dot_angle += ANGLE_BETWEEN_DOTS
 
-        if top_dot is None or right_dot is None or bottom_right_dot is None or \
-           bottom_left_dot is None or left_dot is None:
-            if debug_txt:
-                print("Failed to calculate coords of all dots.")
-            continue
+            if top_dot_angle >= first_dot_angle + 360:
+                if debug_txt:
+                    print("Failed to decode tag")
+                continue
 
-        if display_img:
-            highlight = img.copy()
+            if black_at_angle(img, e, top_dot_angle + 90, distance=first_dot_scale):
+                top_dot_angle += 90
+            elif black_at_angle(img, e, top_dot_angle - 90, distance=first_dot_scale):
+                top_dot_angle -= 90
+            else:
+                if debug_txt:
+                    print("Failed to decode tag after finding dots on opposite sides of tag.")
+                continue
 
-            cv2.ellipse(highlight, ellipse, (0, 0, 255))
-            cv2.circle(highlight, top_dot, 3, (0, 255, 0))
-            cv2.circle(highlight, right_dot, 3, (0, 0, 255))
-            cv2.circle(highlight, left_dot, 3, (0, 0, 255))
-            cv2.circle(highlight, bottom_right_dot, 3, (255, 255, 0))
-            cv2.circle(highlight, bottom_left_dot, 3, (255, 255, 0))
+            if not check_bottom_of_tag(img, e, top_dot_angle, first_dot_scale):
+                if debug_txt:
+                    print("Failed to decode tag, bottom of tag not valid.")
+                continue
 
-            cv2.imshow('cam input with highlighted tag', highlight)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                raise Exception("display cancelled 2")
+            dot_id = decode_tag_id(img, e, top_dot_angle)
 
-        pixel_points = [top_dot, right_dot, bottom_right_dot, bottom_left_dot, left_dot]
+            top_dot = find_dot_coords(img, e, top_dot_angle, first_dot_scale, debug_txt)
+            right_dot = find_dot_coords(img, e, top_dot_angle + 90, first_dot_scale, debug_txt)
+            bottom_right_dot = find_dot_coords(img, e, top_dot_angle + 157.5, first_dot_scale, debug_txt)
+            bottom_left_dot = find_dot_coords(img, e, top_dot_angle + 202.5, first_dot_scale, debug_txt)
+            left_dot = find_dot_coords(img, e, top_dot_angle + 270, first_dot_scale, debug_txt)
 
-        r_vec, t_vecs = tag_solve_pnp(pixel_points, cam_mat, cam_dist)
+            if top_dot is None or right_dot is None or bottom_right_dot is None or \
+               bottom_left_dot is None or left_dot is None:
+                if debug_txt:
+                    print("Failed to calculate coords of all dots.")
+                continue
 
-        return dot_id, r_vec, t_vecs
+            if display_img:
+                highlight = img.copy()
+
+                cv2.ellipse(highlight, e, (0, 0, 255))
+                cv2.circle(highlight, top_dot, 3, (0, 255, 0))
+                cv2.circle(highlight, right_dot, 3, (0, 0, 255))
+                cv2.circle(highlight, left_dot, 3, (0, 0, 255))
+                cv2.circle(highlight, bottom_right_dot, 3, (255, 255, 0))
+                cv2.circle(highlight, bottom_left_dot, 3, (255, 255, 0))
+
+                cv2.imshow('cam input with highlighted tag', highlight)
+                if cv2.waitKey(1) & 0xFF == ord('q'):
+                    raise Exception("display cancelled 2")
+
+            pixel_points = [top_dot, right_dot, bottom_right_dot, bottom_left_dot, left_dot]
+
+            r_vec, t_vecs = tag_solve_pnp(pixel_points, cam_mat, cam_dist)
+
+            return dot_id, r_vec, t_vecs
 
     return None
