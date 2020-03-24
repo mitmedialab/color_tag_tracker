@@ -2,6 +2,10 @@ import cv2
 import numpy as np
 import math
 
+white_low = np.array([0, 0, 190])
+white_high = np.array([255, 100, 255])
+
+
 # TODO generalise ranges later
 green_low = np.array([35, 75, 75])
 green_high = np.array([85, 255, 255])
@@ -19,8 +23,7 @@ WIDTH_OF_DOT = 17.5
 
 
 # Given a HSV colour range, returns the list of contours
-def get_colour_contours(img, range_low, range_high):
-    hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+def get_colour_contours(hsv_img, range_low, range_high):
     mask = cv2.inRange(hsv_img, range_low, range_high)
     major = cv2.__version__.split('.')[0]
     contours = None
@@ -36,7 +39,7 @@ def get_colour_contours(img, range_low, range_high):
 
 
 # Given a list of contours, returns that list in order of descending size
-def get_largest_contours(contours):
+def sort_contours_on_size(contours):
 
     ordered_contours = list(map(lambda c: (c, cv2.contourArea(c)), contours))
     ordered_contours.sort(key=lambda p: p[1], reverse=True)
@@ -223,23 +226,27 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
     #   When one succeeds
     #       solvePnP
     #       return result of solvePnP until have better idea
-    contours = get_colour_contours(img, green_low, green_high)
-    if not contours:
+
+    hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+    col_contours = get_colour_contours(hsv_img, green_low, green_high)
+    if not col_contours:
         if debug_txt:
             print("No contours found")
         return
 
-    contours = get_largest_contours(contours)
+    col_contours = sort_contours_on_size(col_contours)
 
     if display_img:
         contour_img = img.copy()
-        cv2.drawContours(contour_img, contours, -1, (255, 255, 0))
+        cv2.drawContours(contour_img, col_contours, -1, (255, 255, 0))
         cv2.imshow('cam input with highlighted contours', contour_img)
+        cv2.imshow('cam input white mask', cv2.inRange(hsv_img, white_low, white_high))
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             raise Exception("display cancelled 2")
 
-    for contour in contours:
+    for contour in col_contours:
         if len(contour) < 5:
             if debug_txt:
                 print("Contour too small")

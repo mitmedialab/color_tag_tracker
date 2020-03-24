@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from color_tag_tracker import find_tag
 import sys
+import time
 
 frames = 5000
 
@@ -15,13 +16,15 @@ print("Starting test")
 frame_count = 0
 tags_found = 0
 
+start_time = time.time()
+
 while video.isOpened():
     ret, image = video.read()
 
     if not ret:
         break
 
-    res = find_tag(image, cam_mtx, cam_dist, display_img=True)
+    res = find_tag(image, cam_mtx, cam_dist, display_img=False)
 
     frame_count += 1
 
@@ -36,9 +39,11 @@ while video.isOpened():
     print(r_vec)
     print('Translation vector:')
     print(t_vec)
-    if cv2.waitKey(25) & 0xFF == ord('q'):
+    if cv2.waitKey(100) & 0xFF == ord('q'):
         break
 
+end_time = time.time()
 
 print("Finished test")
+print(F"Time taken: {end_time - start_time}s")
 print(F'Found {tags_found} in {frame_count} frames.')
