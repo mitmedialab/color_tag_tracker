@@ -199,7 +199,7 @@ def tag_solve_pnp(pxl_pts, cam_mat, cam_dist):
     _, rot, obj_3d_coords = cv2.solvePnP(np.float32(object_points),
                                          np.float32(pxl_pts),
                                          cam_mat, cam_dist)
-    return rot, flatten(obj_3d_coords)
+    return rot, obj_3d_coords
 
 
 def display_images(img1, img2):
