@@ -46,6 +46,17 @@ def sort_contours_on_size(contours):
     return list(map(lambda p: p[0], ordered_contours))
 
 
+def find_white_ellipses(hsv_img):
+    white_contours = get_colour_contours(hsv_img, white_low, white_high)
+
+    ellipses = []
+    for c in white_contours:
+        if len(c) >= 20:
+            ellipse = cv2.fitEllipse(c)
+            ellipses.append(ellipse)
+    return ellipses
+
+
 def calc_point_coords(ellipse, theta_2, scale=1.):
     center, axes, theta_1 = ellipse
     min_axis_len, maj_axis_len = axes
@@ -241,7 +252,6 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
         contour_img = img.copy()
         cv2.drawContours(contour_img, col_contours, -1, (255, 255, 0))
         cv2.imshow('cam input with highlighted contours', contour_img)
-        cv2.imshow('cam input white mask', cv2.inRange(hsv_img, white_low, white_high))
 
         if cv2.waitKey(1) & 0xFF == ord('q'):
             raise Exception("display cancelled 2")
@@ -291,7 +301,8 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
         bottom_left_dot = find_dot_coords(img, ellipse, top_dot_angle + 202.5, first_dot_scale, debug_txt)
         left_dot = find_dot_coords(img, ellipse, top_dot_angle + 270, first_dot_scale, debug_txt)
 
-        if top_dot is None or right_dot is None or bottom_right_dot is None or bottom_left_dot is None or left_dot is None:
+        if top_dot is None or right_dot is None or bottom_right_dot is None or \
+           bottom_left_dot is None or left_dot is None:
             if debug_txt:
                 print("Failed to calculate coords of all dots.")
             continue

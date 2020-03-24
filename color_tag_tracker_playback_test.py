@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from color_tag_tracker import find_tag
+from color_tag_tracker import find_tag, find_white_ellipses
 import sys
 import time
 
@@ -41,6 +41,7 @@ while video.isOpened():
     print(t_vec)
     if cv2.waitKey(100) & 0xFF == ord('q'):
         break
+
 
 end_time = time.time()
 
