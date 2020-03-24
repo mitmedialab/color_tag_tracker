@@ -1,14 +1,14 @@
 import numpy as np
 import cv2
 from color_tag_tracker import find_tag
-import time
+import sys
 
 frames = 5000
 
 cam_mtx = np.load('mtx.npy')
 cam_dist = np.load('dist.npy')
 
-video = cv2.VideoCapture('tag_test_video.webm')
+video = cv2.VideoCapture(sys.argv[1])
 
 print("Starting test")
 
