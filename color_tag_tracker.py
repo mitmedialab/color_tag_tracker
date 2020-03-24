@@ -195,6 +195,7 @@ def tag_solve_pnp(pxl_pts, cam_mat, cam_dist):
                      [-bottom_dots_x, bottom_dots_y, 0],    # bottom left dot
                      [-CM_TO_DOT_CENTER, 0, 0]]             # left dot
 
+    print(pxl_pts)
     _, rot, obj_3d_coords = cv2.solvePnP(np.float32(object_points),
                                          np.float32(pxl_pts),
                                          cam_mat, cam_dist)
@@ -283,7 +284,7 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
         bottom_left_dot = find_dot_coords(img, ellipse, top_dot_angle + 202.5, first_dot_scale, debug_txt)
         left_dot = find_dot_coords(img, ellipse, top_dot_angle + 270, first_dot_scale, debug_txt)
 
-        if not (top_dot or right_dot or bottom_right_dot or bottom_left_dot or left_dot):
+        if top_dot is None or right_dot is None or bottom_right_dot is None or bottom_left_dot is None or left_dot is None:
             if debug_txt:
                 print("Failed to calculate coords of all dots.")
             continue
