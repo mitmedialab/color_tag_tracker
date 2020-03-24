@@ -7,7 +7,7 @@ white_high = np.array([255, 100, 255])
 
 
 # TODO generalise ranges later
-green_low = np.array([35, 75, 75])
+green_low = np.array([35, 50, 75])
 green_high = np.array([85, 255, 255])
 
 blue_low = np.array([75, 75, 128])
@@ -55,6 +55,57 @@ def find_white_ellipses(hsv_img):
             ellipse = cv2.fitEllipse(c)
             ellipses.append(ellipse)
     return ellipses
+
+
+def get_matching_ellipse(target_ellipse, possible_ellipses):
+
+    best_ellipse = None
+    best_ellipse_area = 0
+
+    target_coords, target_axes, theta = target_ellipse
+
+    c_x, c_y = target_coords
+    maj_len, min_len = target_axes
+
+    maj_len /= 2
+    min_len /= 2
+
+    maj_axis_len_sqr = maj_len * maj_len
+    min_axis_len_sqr = min_len * min_len
+
+    if maj_axis_len_sqr <= 0.0 or min_axis_len_sqr <= 0.0:
+        return None
+
+    theta_rad = math.radians(theta)
+    cos_theta = math.cos(theta_rad)
+    sin_theta = math.sin(theta_rad)
+
+    for e in possible_ellipses:
+        e_coords, e_axes, _ = e
+
+        d_x = e_coords[0] - c_x
+        d_y = e_coords[1] - c_y
+
+        comp_1 = (cos_theta * d_x + sin_theta * d_y) ** 2
+        comp_1 /= maj_axis_len_sqr
+        # if comp_1 > 1:
+        #     continue
+
+        comp_2 = (sin_theta * d_x - cos_theta * d_y) ** 2
+        comp_2 /= min_axis_len_sqr
+
+        dist_from_ellipse = comp_1 + comp_2
+        if dist_from_ellipse > 1:
+            continue
+
+        # Leave out constant factor of pi
+        ellipse_area_approx = (e_axes[0] / 2) * (e_axes[1] / 2)
+
+        if best_ellipse is None or ellipse_area_approx < best_ellipse_area:
+            best_ellipse = e
+            best_ellipse_area = ellipse_area_approx
+
+    return best_ellipse
 
 
 def calc_point_coords(ellipse, theta_2, scale=1.):
@@ -256,12 +307,29 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
         if cv2.waitKey(1) & 0xFF == ord('q'):
             raise Exception("display cancelled 2")
 
+    white_ellipses = find_white_ellipses(hsv_img)
+
     for contour in col_contours:
         if len(contour) < 5:
             if debug_txt:
                 print("Contour too small")
             break
-        ellipse = cv2.fitEllipse(contour)
+        coloured_ellipse = cv2.fitEllipse(contour)
+
+        ellipse = get_matching_ellipse(coloured_ellipse, white_ellipses)
+
+        # if display_img:
+        #     ellipse_img = img.copy()
+        #     cv2.ellipse(ellipse_img, coloured_ellipse, (0, 0, 255))
+        #     [cv2.ellipse(ellipse_img, e, (255, 255, 0)) for e in white_ellipses]
+        #     cv2.ellipse(ellipse_img, ellipse, (0, 255, 255))
+        #     cv2.imshow('all ellipses', ellipse_img)
+        #
+        #     if cv2.waitKey(1000) & 0xFF == ord('q'):
+        #         raise Exception("ellipse cancelled 2")
+
+        if ellipse is None:
+            ellipse = coloured_ellipse
 
         first_dot_angle, first_dot_scale = find_first_dot(img, ellipse, debug_txt)
         if first_dot_angle is None:

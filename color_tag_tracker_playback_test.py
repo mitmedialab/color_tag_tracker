@@ -24,7 +24,7 @@ while video.isOpened():
     if not ret:
         break
 
-    res = find_tag(image, cam_mtx, cam_dist, display_img=False)
+    res = find_tag(image, cam_mtx, cam_dist, display_img=True)
 
     frame_count += 1
 
