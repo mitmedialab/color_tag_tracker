@@ -11,7 +11,7 @@ Useful for tracking position of objects and AR.
   - see https://docs.opencv.org/2.4/modules/calib3d/doc/camera_calibration_and_3d_reconstruction.html
   
 ## Usage
-Import `find_tag` method from `color_tag_tracker`. Use `find_tag` to find the pose of the closest tag in 3D space.
+Import `find_tags` method from `color_tag_tracker`. Use `find_tags` to find the pose of all visible tags in 3D space.
 
 Parameters:
   + img
@@ -30,22 +30,23 @@ Parameters:
       - img with markings overlayed showing position of tag (central ellipse and markings around)
 
 Returns:
-  + tag_id
-    - ID of decoded tag
-  + r_vec
-    - Rotational vector of tag, as returned by opencv's `solvePnP` function.
-  + t_vec
-    - Translation vector of tag, as returned by opencv's `solvePnP` function.
+  + List of tag descriptors as 3-tuples, including:
+      + tag_id
+        - ID of decoded tag
+      + r_vec
+        - Rotational vector of tag, as returned by opencv's `solvePnP` function.
+      + t_vec
+        - Translation vector of tag, as returned by opencv's `solvePnP` function.
 
 ## Examples of usage
 All test scripts require replacing `mtx.npy` and `dist.npy` with the camera matrix and vector of distortion coefficients for camera in use. Current `mtx.npy` and `dist.npy` are parameters for camera used to film `tag_test_video.webm`.
 
 + `color_tag_tracker_webcam_test.py`
-  - Takes input from webcam, prints results of `find_tag`
+  - Takes input from webcam, prints results of `find_tags` for first tag.
 + `color_tag_tracker_demo.py`
-  - Takes input from webcame, prints results of `find_tag`.
-  - If tag_id is 0, projects axes onto tag in image.
-  - Otherwise, projects cube onto tag in image.
+  - Takes input from webcame, prints results of `find_tags` for first tag.
+  - If tag_id is 0, projects axes onto first tag in image.
+  - Otherwise, projects cube onto first tag in image.
 + `color_tag_tracker_playback_test.py`
-  - Takes input from video file, prints results of `find_tag`.
+  - Takes input from video file, prints results of `find_tags`.
   - Video file path given as command line argument.

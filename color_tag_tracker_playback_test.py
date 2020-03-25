@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from color_tag_tracker import find_tag, find_white_ellipses
+from color_tag_tracker import find_tags, find_white_ellipses
 import sys
 import time
 
@@ -24,16 +24,16 @@ while video.isOpened():
     if not ret:
         break
 
-    res = find_tag(image, cam_mtx, cam_dist, display_img=True)
+    tags = find_tags(image, cam_mtx, cam_dist, display_img=True)
 
     frame_count += 1
 
-    if res is None:
+    if len(tags) == 0:
         continue
 
     tags_found += 1
 
-    tag_id, r_vec, t_vec = res
+    tag_id, r_vec, t_vec = tags[0]
     print('Tag id: ' + str(tag_id))
     print('Rotation vector:')
     print(r_vec)
