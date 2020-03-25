@@ -253,14 +253,13 @@ def flatten(arr):
 
 def tag_solve_pnp(pxl_pts, cam_mat, cam_dist):
     bottom_dots_x = CM_TO_DOT_CENTER * math.sin(math.pi / 8)
-    bottom_dots_y = CM_TO_DOT_CENTER * math.cos(math.pi / 8)
-    object_points = [[0, -CM_TO_DOT_CENTER, 0],             # top dot
-                     [CM_TO_DOT_CENTER, 0, 0],              # right dot
-                     [bottom_dots_x, bottom_dots_y, 0],     # bottom right dot
-                     [-bottom_dots_x, bottom_dots_y, 0],    # bottom left dot
-                     [-CM_TO_DOT_CENTER, 0, 0]]             # left dot
+    bottom_dots_z = CM_TO_DOT_CENTER * math.cos(math.pi / 8)
+    object_points = [[0, 0, CM_TO_DOT_CENTER],               # top dot
+                     [CM_TO_DOT_CENTER, 0, 0],               # right dot
+                     [bottom_dots_x, 0, -bottom_dots_z],     # bottom right dot
+                     [-bottom_dots_x, 0, -bottom_dots_z],    # bottom left dot
+                     [-CM_TO_DOT_CENTER, 0, 0]]              # left dot
 
-    print(pxl_pts)
     _, rot, obj_3d_coords = cv2.solvePnP(np.float32(object_points),
                                          np.float32(pxl_pts),
                                          cam_mat, cam_dist)
