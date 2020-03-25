@@ -381,7 +381,7 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             if display_img:
                 highlight = img.copy()
 
-                if e is not matched_ellipse:
+                if e is not matched_ellipse and matched_ellipse is not None:
                     cv2.ellipse(highlight, matched_ellipse, (0, 0, 255))
 
                 cv2.ellipse(highlight, e, (0, 255, 255))
