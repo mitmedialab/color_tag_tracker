@@ -381,7 +381,10 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             if display_img:
                 highlight = img.copy()
 
-                cv2.ellipse(highlight, e, (0, 0, 255))
+                if e is not matched_ellipse:
+                    cv2.ellipse(highlight, matched_ellipse, (0, 0, 255))
+
+                cv2.ellipse(highlight, e, (0, 255, 255))
                 cv2.circle(highlight, top_dot, 3, (0, 255, 0))
                 cv2.circle(highlight, right_dot, 3, (0, 0, 255))
                 cv2.circle(highlight, left_dot, 3, (0, 0, 255))
