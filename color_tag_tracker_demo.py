@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from color_tag_tracker import find_tag
+from color_tag_tracker import find_tags
 
 frames = 5000
 
@@ -12,9 +12,9 @@ axis = np.float32([[0, 0, 0], [2, 0, 0], [0, -2, 0], [0, 0, 2]])
 
 def draw_axis(img, axis_points):
     origin = tuple(axis_points[0].ravel())
-    img = cv2.line(img, origin, tuple(axis_points[1].ravel()), (255, 0, 0), 5)  # x-axis is blue
-    img = cv2.line(img, origin, tuple(axis_points[3].ravel()), (0, 0, 255), 5)  # z-axis is red
-    img = cv2.line(img, origin, tuple(axis_points[2].ravel()), (0, 255, 0), 5)  # y-axis is green
+    img = cv2.line(img, origin, tuple(axis_points[1].ravel()), (255, 0, 0), 3)  # x-axis is blue
+    img = cv2.line(img, origin, tuple(axis_points[3].ravel()), (0, 0, 255), 3)  # z-axis is red
+    img = cv2.line(img, origin, tuple(axis_points[2].ravel()), (0, 255, 0), 3)  # y-axis is green
     return img
 
 
@@ -45,9 +45,9 @@ for frame_num in range(frames):
     if frame_num % 50 is 0:
         print(frame_num)
     _, image = camera.read()
-    res = find_tag(image, cam_mtx, cam_dist, display_img=False)
-    if res is not None:
-        tag_id, r_vec, t_vec = res
+    tags = find_tags(image, cam_mtx, cam_dist, display_img=False)
+    if len(tags) != 0:
+        tag_id, r_vec, t_vec = tags[0]
         print('Tag id: ' + str(tag_id))
         print('Rotation vector:')
         print(r_vec)
