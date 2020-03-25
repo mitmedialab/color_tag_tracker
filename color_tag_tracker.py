@@ -276,17 +276,7 @@ def display_images(img1, img2):
         raise Exception("display cancelled 2")
 
 
-def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
-    # Plan
-    #   Find all contours
-    #   Order by size, starting with largest
-    #   Starting with the first contour try
-    #       Fit an ellipse
-    #       Decode pattern, find orientation
-    #   If fails, repeat with next smallest contour
-    #   When one succeeds
-    #       solvePnP
-    #       return result of solvePnP until have better idea
+def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
     hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -308,8 +298,10 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
     white_ellipses = find_white_ellipses(hsv_img)
 
+    found_tags = []
+
     for contour in col_contours:
-        if len(contour) < 5:
+        if len(contour) < 10:
             if debug_txt:
                 print("Contour too small")
             break
@@ -365,6 +357,11 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
             dot_id = decode_tag_id(img, e, top_dot_angle)
 
+            if dot_id in [old_id for old_id, _, _ in found_tags]:
+                if debug_txt:
+                    print(F"Found tag {dot_id} twice somehow.")
+                continue
+
             top_dot = find_dot_coords(img, e, top_dot_angle, first_dot_scale, debug_txt)
             right_dot = find_dot_coords(img, e, top_dot_angle + 90, first_dot_scale, debug_txt)
             bottom_right_dot = find_dot_coords(img, e, top_dot_angle + 157.5, first_dot_scale, debug_txt)
@@ -398,6 +395,7 @@ def find_tag(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
             r_vec, t_vecs = tag_solve_pnp(pixel_points, cam_mat, cam_dist)
 
-            return dot_id, r_vec, t_vecs
+            found_tags.append((dot_id, r_vec, t_vecs))
+            break
 
-    return None
+    return found_tags

@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from color_tag_tracker import find_tag
+from color_tag_tracker import find_tags
 
 frames = 5000
 
@@ -15,10 +15,10 @@ for i in range(frames):
     if i % 50 is 0:
         print(i)
     _, image = camera.read()
-    res = find_tag(image, cam_mtx, cam_dist, display_img=True)
-    if res is None:
+    tags = find_tags(image, cam_mtx, cam_dist, display_img=True)
+    if len(tags) == 0:
         continue
-    tag_id, r_vec, t_vec = res
+    tag_id, r_vec, t_vec = tags[0]
     print('Tag id: ' + str(tag_id))
     print('Rotation vector:')
     print(r_vec)
