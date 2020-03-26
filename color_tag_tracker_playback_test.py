@@ -29,6 +29,9 @@ while video.isOpened():
     frame_count += 1
 
     if len(tags) == 0:
+        # response = input()
+        # if response != '':
+        #     cv2.imwrite(F'test_images/test_image{response}.jpg', image)
         continue
 
     tags_found += 1
