@@ -126,40 +126,39 @@ def bgr_to_hsv(col):
     return cv2.cvtColor(np.array([[col]]), cv2.COLOR_BGR2HSV)[0, 0]
 
 
-def unsaturated_at_angle(img, ellipse, theta, distance):
+def unsaturated_at_angle(hsv_img, ellipse, theta, distance):
     coords = calc_point_coords(ellipse, theta, distance)
-    if coords[1] >= img.shape[0] or coords[1] < 0 or coords[0] >= img.shape[1] or coords[0] < 0:
+    if coords[1] >= hsv_img.shape[0] or coords[1] < 0 or coords[0] >= hsv_img.shape[1] or coords[0] < 0:
         return False, False
-    colour = img[coords[1], coords[0]]
-    hsv_colour = bgr_to_hsv(colour)
+    hsv_colour = hsv_img[coords[1], coords[0]]
     return hsv_colour[1] < 100, hsv_colour
 
 
-def black_at_angle(img, ellipse, theta, distance=ELLIPSE_TO_DOTS_SCALE):
-    is_unsaturated, hsv_colour = unsaturated_at_angle(img, ellipse, theta, distance)
+def black_at_angle(hsv_img, ellipse, theta, distance=ELLIPSE_TO_DOTS_SCALE):
+    is_unsaturated, hsv_colour = unsaturated_at_angle(hsv_img, ellipse, theta, distance)
     return is_unsaturated and hsv_colour[2] < 180
 
 
-def white_at_angle(img, ellipse, theta, distance=ELLIPSE_TO_DOTS_SCALE):
-    is_unsaturated, hsv_colour = unsaturated_at_angle(img, ellipse, theta, distance)
+def white_at_angle(hsv_img, ellipse, theta, distance=ELLIPSE_TO_DOTS_SCALE):
+    is_unsaturated, hsv_colour = unsaturated_at_angle(hsv_img, ellipse, theta, distance)
     return is_unsaturated and hsv_colour[2] > 200
 
 
-def find_dot_centre(img, ellipse, init_angle, init_scale, debug_txt):
+def find_dot_centre(hsv_img, ellipse, init_angle, init_scale, debug_txt):
     left_angle = init_angle
-    while black_at_angle(img, ellipse, left_angle - 2) and init_angle - left_angle < WIDTH_OF_DOT:
+    while black_at_angle(hsv_img, ellipse, left_angle - 2) and init_angle - left_angle < WIDTH_OF_DOT:
         left_angle -= 2
-    while black_at_angle(img, ellipse, left_angle - 1) and init_angle - left_angle < WIDTH_OF_DOT:
+    while black_at_angle(hsv_img, ellipse, left_angle - 1) and init_angle - left_angle < WIDTH_OF_DOT:
         left_angle -= 1
-    while black_at_angle(img, ellipse, left_angle - 0.1) and init_angle - left_angle < WIDTH_OF_DOT:
+    while black_at_angle(hsv_img, ellipse, left_angle - 0.1) and init_angle - left_angle < WIDTH_OF_DOT:
         left_angle -= 0.1
 
     right_angle = init_angle
-    while black_at_angle(img, ellipse, right_angle + 2) and right_angle - init_angle < WIDTH_OF_DOT:
+    while black_at_angle(hsv_img, ellipse, right_angle + 2) and right_angle - init_angle < WIDTH_OF_DOT:
         right_angle += 2
-    while black_at_angle(img, ellipse, right_angle + 1) and right_angle - init_angle < WIDTH_OF_DOT:
+    while black_at_angle(hsv_img, ellipse, right_angle + 1) and right_angle - init_angle < WIDTH_OF_DOT:
         right_angle += 1
-    while black_at_angle(img, ellipse, right_angle + 0.1) and right_angle - init_angle < WIDTH_OF_DOT:
+    while black_at_angle(hsv_img, ellipse, right_angle + 0.1) and right_angle - init_angle < WIDTH_OF_DOT:
         right_angle += 0.1
 
     if right_angle - left_angle > WIDTH_OF_DOT + 5:
@@ -169,19 +168,19 @@ def find_dot_centre(img, ellipse, init_angle, init_scale, debug_txt):
     true_angle = (left_angle + right_angle) / 2
 
     scale_to_top = init_scale
-    while black_at_angle(img, ellipse, true_angle, scale_to_top + 0.05) and scale_to_top < 1.75:
+    while black_at_angle(hsv_img, ellipse, true_angle, scale_to_top + 0.05) and scale_to_top < 1.75:
         scale_to_top += 0.05
-    while black_at_angle(img, ellipse, true_angle, scale_to_top + 0.02) and scale_to_top < 1.75:
+    while black_at_angle(hsv_img, ellipse, true_angle, scale_to_top + 0.02) and scale_to_top < 1.75:
         scale_to_top += 0.02
-    while black_at_angle(img, ellipse, true_angle, scale_to_top + 0.01) and scale_to_top < 1.75:
+    while black_at_angle(hsv_img, ellipse, true_angle, scale_to_top + 0.01) and scale_to_top < 1.75:
         scale_to_top += 0.01
 
     scale_to_bottom = init_scale
-    while black_at_angle(img, ellipse, true_angle, scale_to_bottom - 0.05) and scale_to_bottom > 1:
+    while black_at_angle(hsv_img, ellipse, true_angle, scale_to_bottom - 0.05) and scale_to_bottom > 1:
         scale_to_bottom -= 0.05
-    while black_at_angle(img, ellipse, true_angle, scale_to_bottom - 0.02) and scale_to_bottom > 1:
+    while black_at_angle(hsv_img, ellipse, true_angle, scale_to_bottom - 0.02) and scale_to_bottom > 1:
         scale_to_bottom -= 0.02
-    while black_at_angle(img, ellipse, true_angle, scale_to_bottom - 0.01) and scale_to_bottom > 1:
+    while black_at_angle(hsv_img, ellipse, true_angle, scale_to_bottom - 0.01) and scale_to_bottom > 1:
         scale_to_bottom -= 0.01
 
     true_scale = (scale_to_top + scale_to_bottom) / 2
@@ -189,9 +188,9 @@ def find_dot_centre(img, ellipse, init_angle, init_scale, debug_txt):
     return true_angle, true_scale
 
 
-def find_first_dot(img, ellipse, debug_txt):
+def find_first_dot(hsv_img, ellipse, debug_txt):
     init_angle = 0.
-    while not black_at_angle(img, ellipse, init_angle) and init_angle < 360:
+    while not black_at_angle(hsv_img, ellipse, init_angle) and init_angle < 360:
         init_angle += 5
 
     if init_angle >= 360:
@@ -199,7 +198,7 @@ def find_first_dot(img, ellipse, debug_txt):
             print("No dot found")
         return None, None
 
-    angle, scale = find_dot_centre(img, ellipse, init_angle, ELLIPSE_TO_DOTS_SCALE, debug_txt)
+    angle, scale = find_dot_centre(hsv_img, ellipse, init_angle, ELLIPSE_TO_DOTS_SCALE, debug_txt)
 
     if angle is None:
         if debug_txt:
@@ -208,31 +207,31 @@ def find_first_dot(img, ellipse, debug_txt):
     return angle, scale
 
 
-def check_bottom_of_tag(img, ellipse, top_dot_angle, scale):
-    return white_at_angle(img, ellipse, top_dot_angle + 112.5, scale) and \
-           white_at_angle(img, ellipse, top_dot_angle + 135, scale) and \
-           black_at_angle(img, ellipse, top_dot_angle + 157.5, scale) and \
-           white_at_angle(img, ellipse, top_dot_angle + 180, scale) and \
-           black_at_angle(img, ellipse, top_dot_angle + 202.5, scale) and \
-           white_at_angle(img, ellipse, top_dot_angle + 225, scale) and \
-           white_at_angle(img, ellipse, top_dot_angle + 247.5, scale)
+def check_bottom_of_tag(hsv_img, ellipse, top_dot_angle, scale):
+    return white_at_angle(hsv_img, ellipse, top_dot_angle + 112.5, scale) and \
+           white_at_angle(hsv_img, ellipse, top_dot_angle + 135, scale) and \
+           black_at_angle(hsv_img, ellipse, top_dot_angle + 157.5, scale) and \
+           white_at_angle(hsv_img, ellipse, top_dot_angle + 180, scale) and \
+           black_at_angle(hsv_img, ellipse, top_dot_angle + 202.5, scale) and \
+           white_at_angle(hsv_img, ellipse, top_dot_angle + 225, scale) and \
+           white_at_angle(hsv_img, ellipse, top_dot_angle + 247.5, scale)
 
 
-def decode_tag_id(img, ellipse, top_dot_angle):
+def decode_tag_id(hsv_img, ellipse, top_dot_angle):
     dot_id = 0
-    if black_at_angle(img, ellipse, top_dot_angle + 67.25):
+    if black_at_angle(hsv_img, ellipse, top_dot_angle + 67.25):
         dot_id += 1
-    if black_at_angle(img, ellipse, top_dot_angle + 45):
+    if black_at_angle(hsv_img, ellipse, top_dot_angle + 45):
         dot_id += 2
-    if black_at_angle(img, ellipse, top_dot_angle - 45):
+    if black_at_angle(hsv_img, ellipse, top_dot_angle - 45):
         dot_id += 4
-    if black_at_angle(img, ellipse, top_dot_angle - 67.25):
+    if black_at_angle(hsv_img, ellipse, top_dot_angle - 67.25):
         dot_id += 8
     return dot_id
 
 
-def find_dot_coords(img, ellipse, estimated_dot_angle, estimated_dot_scale, debug_text):
-    angle, scale = find_dot_centre(img, ellipse, estimated_dot_angle, estimated_dot_scale, debug_text)
+def find_dot_coords(hsv_img, ellipse, estimated_dot_angle, estimated_dot_scale, debug_text):
+    angle, scale = find_dot_centre(hsv_img, ellipse, estimated_dot_angle, estimated_dot_scale, debug_text)
     if angle is None:
         return None
     return calc_point_coords(ellipse, angle, scale)
@@ -320,16 +319,16 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             ellipses_to_test = [matched_ellipse, coloured_ellipse]
 
         for e in ellipses_to_test:
-            first_dot_angle, first_dot_scale = find_first_dot(img, e, debug_txt)
+            first_dot_angle, first_dot_scale = find_first_dot(hsv_img, e, debug_txt)
             if first_dot_angle is None:
                 continue
 
             top_dot_angle = first_dot_angle
 
-            while not (black_at_angle(img, e, top_dot_angle, distance=first_dot_scale) and
-                       (black_at_angle(img, e, top_dot_angle + 180, distance=first_dot_scale) or
-                       black_at_angle(img, e, top_dot_angle + 178, distance=first_dot_scale) or
-                       black_at_angle(img, e, top_dot_angle + 182, distance=first_dot_scale))) \
+            while not (black_at_angle(hsv_img, e, top_dot_angle, distance=first_dot_scale) and
+                       (black_at_angle(hsv_img, e, top_dot_angle + 180, distance=first_dot_scale) or
+                       black_at_angle(hsv_img, e, top_dot_angle + 178, distance=first_dot_scale) or
+                       black_at_angle(hsv_img, e, top_dot_angle + 182, distance=first_dot_scale))) \
                     and top_dot_angle < first_dot_angle + 360:
                 top_dot_angle += ANGLE_BETWEEN_DOTS
 
@@ -346,15 +345,15 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                     #     cv2.imshow(F'temp_test{time.time()}', highlight_debug)
                 continue
 
-            temp_angle, temp_scale = find_dot_centre(img, e, top_dot_angle, init_scale=first_dot_scale,
+            temp_angle, temp_scale = find_dot_centre(hsv_img, e, top_dot_angle, init_scale=first_dot_scale,
                                                      debug_txt=debug_txt)
             if temp_angle is not None:
                 first_dot_scale = temp_scale
                 top_dot_angle = temp_angle
 
-            if black_at_angle(img, e, top_dot_angle + 90, distance=first_dot_scale):
+            if black_at_angle(hsv_img, e, top_dot_angle + 90, distance=first_dot_scale):
                 top_dot_angle += 90
-            elif black_at_angle(img, e, top_dot_angle - 90, distance=first_dot_scale):
+            elif black_at_angle(hsv_img, e, top_dot_angle - 90, distance=first_dot_scale):
                 top_dot_angle -= 90
             else:
                 if debug_txt:
@@ -363,23 +362,23 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
                 continue
 
-            if not check_bottom_of_tag(img, e, top_dot_angle, first_dot_scale):
+            if not check_bottom_of_tag(hsv_img, e, top_dot_angle, first_dot_scale):
                 if debug_txt:
                     print("Failed to decode tag, bottom of tag not valid.")
                 continue
 
-            dot_id = decode_tag_id(img, e, top_dot_angle)
+            dot_id = decode_tag_id(hsv_img, e, top_dot_angle)
 
             if dot_id in [old_id for old_id, _, _ in found_tags]:
                 if debug_txt:
                     print(F"Found tag {dot_id} twice somehow.")
                 continue
 
-            top_dot = find_dot_coords(img, e, top_dot_angle, first_dot_scale, debug_txt)
-            right_dot = find_dot_coords(img, e, top_dot_angle + 90, first_dot_scale, debug_txt)
-            bottom_right_dot = find_dot_coords(img, e, top_dot_angle + 157.5, first_dot_scale, debug_txt)
-            bottom_left_dot = find_dot_coords(img, e, top_dot_angle + 202.5, first_dot_scale, debug_txt)
-            left_dot = find_dot_coords(img, e, top_dot_angle + 270, first_dot_scale, debug_txt)
+            top_dot = find_dot_coords(hsv_img, e, top_dot_angle, first_dot_scale, debug_txt)
+            right_dot = find_dot_coords(hsv_img, e, top_dot_angle + 90, first_dot_scale, debug_txt)
+            bottom_right_dot = find_dot_coords(hsv_img, e, top_dot_angle + 157.5, first_dot_scale, debug_txt)
+            bottom_left_dot = find_dot_coords(hsv_img, e, top_dot_angle + 202.5, first_dot_scale, debug_txt)
+            left_dot = find_dot_coords(hsv_img, e, top_dot_angle + 270, first_dot_scale, debug_txt)
 
             if top_dot is None or right_dot is None or bottom_right_dot is None or \
                     bottom_left_dot is None or left_dot is None:
