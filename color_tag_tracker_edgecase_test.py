@@ -11,6 +11,7 @@ cam_dist = np.load('dist.npy')
 print("Starting test")
 
 for i, f in enumerate(glob.glob("test_images/*.jpg")):
+    print(F"Frame{i}")
 
     image = cv2.imread(f)
     tags = find_tags(image, cam_mtx, cam_dist, debug_txt=True, display_img=True)

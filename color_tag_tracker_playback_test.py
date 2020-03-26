@@ -1,6 +1,6 @@
 import numpy as np
 import cv2
-from color_tag_tracker import find_tags, find_white_ellipses
+from color_tag_tracker import find_tags
 import sys
 import time
 

@@ -163,7 +163,7 @@ def find_dot_centre(img, ellipse, init_angle, init_scale, debug_txt):
 
     if right_angle - left_angle > WIDTH_OF_DOT + 5:
         if debug_txt:
-            print("Dot too big")
+            print(F"Dot too big, angle: {right_angle - left_angle}")
         return None, None
     true_angle = (left_angle + right_angle) / 2
 
@@ -335,6 +335,12 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                     print("Failed to decode tag")
                 continue
 
+            temp_angle, temp_scale = find_dot_centre(img, e, top_dot_angle, init_scale=first_dot_scale,
+                                                     debug_txt=debug_txt)
+            if temp_angle is not None:
+                first_dot_scale = temp_scale
+                top_dot_angle = temp_angle
+
             if black_at_angle(img, e, top_dot_angle + 90, distance=first_dot_scale):
                 top_dot_angle += 90
             elif black_at_angle(img, e, top_dot_angle - 90, distance=first_dot_scale):
@@ -343,6 +349,11 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 if debug_txt:
                     print("Failed to decode tag after finding dots on opposite sides of tag, using scale: ",
                           first_dot_scale)
+                    # highlight_debug = img.copy()
+                    # cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle, first_dot_scale), 3, (0, 0, 255))
+                    # cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 90, first_dot_scale), 3, (255, 255, 0))
+                    # cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle - 90, first_dot_scale), 3, (255, 0, 0))
+                    # cv2.imshow('temp_test', highlight_debug)
 
                 continue
 
