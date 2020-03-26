@@ -5,7 +5,6 @@ import math
 white_low = np.array([0, 0, 190])
 white_high = np.array([255, 100, 255])
 
-
 # TODO generalise ranges later
 green_low = np.array([35, 50, 75])
 green_high = np.array([85, 255, 255])
@@ -26,21 +25,19 @@ WIDTH_OF_DOT = 17.5
 def get_colour_contours(hsv_img, range_low, range_high):
     mask = cv2.inRange(hsv_img, range_low, range_high)
     major = cv2.__version__.split('.')[0]
-    contours = None
     if major == '3':
         _, contours, _ = cv2.findContours(mask,
-                                      cv2.RETR_TREE,
-                                      cv2.CHAIN_APPROX_SIMPLE)
+                                          cv2.RETR_TREE,
+                                          cv2.CHAIN_APPROX_SIMPLE)
     else:
         contours, _ = cv2.findContours(mask,
-                                      cv2.RETR_TREE,
-                                      cv2.CHAIN_APPROX_SIMPLE)
+                                       cv2.RETR_TREE,
+                                       cv2.CHAIN_APPROX_SIMPLE)
     return contours
 
 
 # Given a list of contours, returns that list in order of descending size
 def sort_contours_on_size(contours):
-
     ordered_contours = list(map(lambda c: (c, cv2.contourArea(c)), contours))
     ordered_contours.sort(key=lambda p: p[1], reverse=True)
     return list(map(lambda p: p[0], ordered_contours))
@@ -58,7 +55,6 @@ def find_white_ellipses(hsv_img):
 
 
 def get_matching_ellipse(target_ellipse, possible_ellipses):
-
     best_ellipse = None
     best_ellipse_area = 0
 
@@ -193,7 +189,6 @@ def find_dot_centre(img, ellipse, init_angle, init_scale, debug_txt):
 
 
 def find_first_dot(img, ellipse, debug_txt):
-
     init_angle = 0.
     while not black_at_angle(img, ellipse, init_angle) and init_angle < 360:
         init_angle += 5
@@ -254,11 +249,11 @@ def flatten(arr):
 def tag_solve_pnp(pxl_pts, cam_mat, cam_dist):
     bottom_dots_x = CM_TO_DOT_CENTER * math.sin(math.pi / 8)
     bottom_dots_z = CM_TO_DOT_CENTER * math.cos(math.pi / 8)
-    object_points = [[0, 0, CM_TO_DOT_CENTER],               # top dot
-                     [CM_TO_DOT_CENTER, 0, 0],               # right dot
-                     [bottom_dots_x, 0, -bottom_dots_z],     # bottom right dot
-                     [-bottom_dots_x, 0, -bottom_dots_z],    # bottom left dot
-                     [-CM_TO_DOT_CENTER, 0, 0]]              # left dot
+    object_points = [[0, 0, CM_TO_DOT_CENTER],  # top dot
+                     [CM_TO_DOT_CENTER, 0, 0],  # right dot
+                     [bottom_dots_x, 0, -bottom_dots_z],  # bottom right dot
+                     [-bottom_dots_x, 0, -bottom_dots_z],  # bottom left dot
+                     [-CM_TO_DOT_CENTER, 0, 0]]  # left dot
 
     _, rot, obj_3d_coords = cv2.solvePnP(np.float32(object_points),
                                          np.float32(pxl_pts),
@@ -277,7 +272,6 @@ def display_images(img1, img2):
 
 
 def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
-
     hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
     col_contours = get_colour_contours(hsv_img, green_low, green_high)
@@ -332,7 +326,7 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             top_dot_angle = first_dot_angle
 
             while not (black_at_angle(img, e, top_dot_angle, distance=first_dot_scale) and
-                       black_at_angle(img, e, top_dot_angle + 180, distance=first_dot_scale))\
+                       black_at_angle(img, e, top_dot_angle + 180, distance=first_dot_scale)) \
                     and top_dot_angle < first_dot_angle + 360:
                 top_dot_angle += ANGLE_BETWEEN_DOTS
 
@@ -369,7 +363,7 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             left_dot = find_dot_coords(img, e, top_dot_angle + 270, first_dot_scale, debug_txt)
 
             if top_dot is None or right_dot is None or bottom_right_dot is None or \
-               bottom_left_dot is None or left_dot is None:
+                    bottom_left_dot is None or left_dot is None:
                 if debug_txt:
                     print("Failed to calculate coords of all dots.")
                 continue
