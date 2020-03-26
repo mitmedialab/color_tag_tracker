@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import math
+import time
 
 white_low = np.array([0, 0, 190])
 white_high = np.array([255, 100, 255])
@@ -326,13 +327,23 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             top_dot_angle = first_dot_angle
 
             while not (black_at_angle(img, e, top_dot_angle, distance=first_dot_scale) and
-                       black_at_angle(img, e, top_dot_angle + 180, distance=first_dot_scale)) \
+                       (black_at_angle(img, e, top_dot_angle + 180, distance=first_dot_scale) or
+                       black_at_angle(img, e, top_dot_angle + 178, distance=first_dot_scale) or
+                       black_at_angle(img, e, top_dot_angle + 182, distance=first_dot_scale))) \
                     and top_dot_angle < first_dot_angle + 360:
                 top_dot_angle += ANGLE_BETWEEN_DOTS
 
             if top_dot_angle >= first_dot_angle + 360:
                 if debug_txt:
-                    print("Failed to decode tag")
+                    print(F"Failed to find 2 markings opposite eachother, at scale {first_dot_scale}.")
+                    # if e is matched_ellipse:
+                    #     highlight_debug = img.copy()
+                    #     cv2.ellipse(highlight_debug, e, (0, 255, 255))
+                    #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle, first_dot_scale), 3, (0, 0, 255))
+                    #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 180, first_dot_scale), 3, (255, 0, 0))
+                    #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 178, first_dot_scale), 3, (255, 0, 0))
+                    #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 182, first_dot_scale), 3, (255, 0, 0))
+                    #     cv2.imshow(F'temp_test{time.time()}', highlight_debug)
                 continue
 
             temp_angle, temp_scale = find_dot_centre(img, e, top_dot_angle, init_scale=first_dot_scale,
@@ -349,11 +360,6 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 if debug_txt:
                     print("Failed to decode tag after finding dots on opposite sides of tag, using scale: ",
                           first_dot_scale)
-                    # highlight_debug = img.copy()
-                    # cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle, first_dot_scale), 3, (0, 0, 255))
-                    # cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 90, first_dot_scale), 3, (255, 255, 0))
-                    # cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle - 90, first_dot_scale), 3, (255, 0, 0))
-                    # cv2.imshow('temp_test', highlight_debug)
 
                 continue
 
