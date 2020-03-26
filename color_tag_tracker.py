@@ -341,7 +341,9 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 top_dot_angle -= 90
             else:
                 if debug_txt:
-                    print("Failed to decode tag after finding dots on opposite sides of tag.")
+                    print("Failed to decode tag after finding dots on opposite sides of tag, using scale: ",
+                          first_dot_scale)
+
                 continue
 
             if not check_bottom_of_tag(img, e, top_dot_angle, first_dot_scale):
@@ -382,7 +384,7 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 cv2.circle(highlight, bottom_left_dot, 3, (255, 255, 0))
 
                 cv2.imshow('cam input with highlighted tag', highlight)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
+                if cv2.waitKey(25) & 0xFF == ord('q'):
                     raise Exception("display cancelled 2")
 
             pixel_points = [top_dot, right_dot, bottom_right_dot, bottom_left_dot, left_dot]
