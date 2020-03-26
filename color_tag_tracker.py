@@ -163,7 +163,7 @@ def find_dot_centre(hsv_img, ellipse, init_angle, init_scale, debug_txt):
 
     if right_angle - left_angle > WIDTH_OF_DOT + 5:
         if debug_txt:
-            print(F"Dot too big, angle: {right_angle - left_angle}")
+            print(F"Dot too big, angle: {right_angle - left_angle} wide, found at angle {init_angle}")
         return None, None
     true_angle = (left_angle + right_angle) / 2
 
@@ -293,7 +293,7 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
     white_ellipses = find_white_ellipses(hsv_img)
 
     found_tags = []
-
+    # attempt = -1
     for contour in col_contours:
         if len(contour) < 10:
             if debug_txt:
@@ -319,6 +319,7 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             ellipses_to_test = [matched_ellipse, coloured_ellipse]
 
         for e in ellipses_to_test:
+            # attempt += 1
             first_dot_angle, first_dot_scale = find_first_dot(hsv_img, e, debug_txt)
             if first_dot_angle is None:
                 continue
@@ -335,7 +336,7 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             if top_dot_angle >= first_dot_angle + 360:
                 if debug_txt:
                     print(F"Failed to find 2 markings opposite eachother, at scale {first_dot_scale}.")
-                    # if e is matched_ellipse:
+                    # if attempt < 2:
                     #     highlight_debug = img.copy()
                     #     cv2.ellipse(highlight_debug, e, (0, 255, 255))
                     #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle, first_dot_scale), 3, (0, 0, 255))
@@ -363,9 +364,21 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 continue
 
             if not check_bottom_of_tag(hsv_img, e, top_dot_angle, first_dot_scale):
-                if debug_txt:
-                    print("Failed to decode tag, bottom of tag not valid.")
-                continue
+                # Try to recenter on top dot, to improve decoding
+                top_dot_angle, first_dot_scale = find_dot_centre(hsv_img, e, top_dot_angle, init_scale=first_dot_scale,
+                                                                 debug_txt=debug_txt)
+
+                if top_dot_angle is None:
+                    if debug_txt:
+                        print("Failed to decode tag, bottom of tag not valid.")
+                        print("Tried to recenter on top dot, but failed to find centre.")
+                    continue
+
+                if not check_bottom_of_tag(hsv_img, e, top_dot_angle, first_dot_scale):
+                    if debug_txt:
+                        print("Failed to decode tag, bottom of tag not valid.")
+                        print("Found to be invalid before and after recentering top dot")
+                    continue
 
             dot_id = decode_tag_id(hsv_img, e, top_dot_angle)
 

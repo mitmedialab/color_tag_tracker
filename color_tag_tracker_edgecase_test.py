@@ -2,6 +2,7 @@ import numpy as np
 import cv2
 from color_tag_tracker import find_tags
 import glob
+import os
 
 frames = 5000
 
@@ -12,7 +13,7 @@ print("Starting test")
 frames = 0
 tags_found = 0
 for i, f in enumerate(glob.glob("test_images/*.jpg")):
-    print(F"Frame{i}")
+    print(F"Frame{i}: {f}")
 
     image = cv2.imread(f)
     tags = find_tags(image, cam_mtx, cam_dist, debug_txt=True, display_img=True)
@@ -25,9 +26,10 @@ for i, f in enumerate(glob.glob("test_images/*.jpg")):
         print('Translation vector:')
         print(t_vec)
         tags_found += 1
+        # os.remove(f)
     if cv2.waitKey(100) & 0xFF == ord('q'):
         raise Exception("display cancelled 2")
     frames += 1
-    #input()
+    input()
 
 print(F"Finished test, now catches {tags_found}/{frames} edge cases")
