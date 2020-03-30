@@ -39,6 +39,8 @@ def sort_contours_on_size(contours):
     return list(map(lambda p: p[0], ordered_contours))
 
 
+# Given an image, returns a list of ellipses (opencv RotatedRect) of white regions in image
+# Ignores small regions
 def find_white_ellipses(hsv_img):
     white_contours = get_colour_contours(hsv_img, white_low, white_high)
 
@@ -50,6 +52,7 @@ def find_white_ellipses(hsv_img):
     return ellipses
 
 
+# Finds ellipse in possible_ellipses which best matches target_ellipse
 def get_matching_ellipse(target_ellipse, possible_ellipses):
     best_ellipse = None
     best_ellipse_area = 0
@@ -100,6 +103,8 @@ def get_matching_ellipse(target_ellipse, possible_ellipses):
     return best_ellipse
 
 
+# Finds the (x, y) coordinates of the point on ellipse (scaled by
+# factor of scale) which is theta_2 degrees from it's major axis
 def calc_point_coords(ellipse, theta_2, scale=1.):
     center, axes, theta_1 = ellipse
     min_axis_len, maj_axis_len = axes
@@ -117,28 +122,35 @@ def calc_point_coords(ellipse, theta_2, scale=1.):
     return tuple((np.array(center) + maj_axis * math.cos(theta_2) + min_axis * math.sin(theta_2)).astype(int))
 
 
-def bgr_to_hsv(col):
-    return cv2.cvtColor(np.array([[col]]), cv2.COLOR_BGR2HSV)[0, 0]
-
-
-def unsaturated_at_angle(hsv_img, ellipse, theta, distance):
-    coords = calc_point_coords(ellipse, theta, distance)
+# Returns tuple of
+#   + Boolean of whether in hsv_img the pixel at angle theta from
+#     the major axis of ellipse, scaled by a factor of scale, is unsaturated
+#   + The hsv colour at that position
+def unsaturated_at_angle(hsv_img, ellipse, theta, scale):
+    coords = calc_point_coords(ellipse, theta, scale)
     if coords[1] >= hsv_img.shape[0] or coords[1] < 0 or coords[0] >= hsv_img.shape[1] or coords[0] < 0:
         return False, False
     hsv_colour = hsv_img[coords[1], coords[0]]
     return hsv_colour[1] < 100, hsv_colour
 
 
-def black_at_angle(hsv_img, ellipse, theta, distance=ELLIPSE_TO_DOTS_SCALE):
-    is_unsaturated, hsv_colour = unsaturated_at_angle(hsv_img, ellipse, theta, distance)
+# Returns boolean of whether in hsv_img the pixel at angle theta from
+# the major axis of ellipse, scaled by a factor of scale, is coloured black
+def black_at_angle(hsv_img, ellipse, theta, scale=ELLIPSE_TO_DOTS_SCALE):
+    is_unsaturated, hsv_colour = unsaturated_at_angle(hsv_img, ellipse, theta, scale)
     return is_unsaturated and hsv_colour[2] < 180
 
 
-def white_at_angle(hsv_img, ellipse, theta, distance=ELLIPSE_TO_DOTS_SCALE):
-    is_unsaturated, hsv_colour = unsaturated_at_angle(hsv_img, ellipse, theta, distance)
+# Returns boolean of whether in hsv_img the pixel at angle theta from
+# the major axis of ellipse, scaled by a factor of scale, is coloured white
+def white_at_angle(hsv_img, ellipse, theta, scale=ELLIPSE_TO_DOTS_SCALE):
+    is_unsaturated, hsv_colour = unsaturated_at_angle(hsv_img, ellipse, theta, scale)
     return is_unsaturated and hsv_colour[2] > 200
 
 
+# Given the image hsv_img, ellipse at the centre of the tag, initial estimate of angle to
+# the centre of the marking and initial estimate of scale of the center of the marking,
+# returns the true angle and scale of the centre of the marking on the edge of the tag
 def find_dot_centre(hsv_img, ellipse, init_angle, init_scale, debug_txt):
     left_angle = init_angle
     while black_at_angle(hsv_img, ellipse, left_angle - 2) and init_angle - left_angle < WIDTH_OF_DOT:
@@ -183,6 +195,8 @@ def find_dot_centre(hsv_img, ellipse, init_angle, init_scale, debug_txt):
     return true_angle, true_scale
 
 
+# Searches around the ellipse in the image hsv_img, returning the angle and scale
+# of the first marking on the tag it successfully finds
 def find_first_dot(hsv_img, ellipse, debug_txt):
     init_angle = 0.
     while not black_at_angle(hsv_img, ellipse, init_angle) and init_angle < 360:
@@ -202,6 +216,7 @@ def find_first_dot(hsv_img, ellipse, debug_txt):
     return angle, scale
 
 
+# Returns boolean of whether the bottom of the tag is valid/can be correctly decoded
 def check_bottom_of_tag(hsv_img, ellipse, top_dot_angle, scale):
     return white_at_angle(hsv_img, ellipse, top_dot_angle + 112.5, scale) and \
            white_at_angle(hsv_img, ellipse, top_dot_angle + 135, scale) and \
@@ -212,6 +227,9 @@ def check_bottom_of_tag(hsv_img, ellipse, top_dot_angle, scale):
            white_at_angle(hsv_img, ellipse, top_dot_angle + 247.5, scale)
 
 
+# Given the image, ellipse at the top of the tag and the angle of the top of
+# the tag relative to the major axis of the ellipse, returns the decoded id
+# number of the tag
 def decode_tag_id(hsv_img, ellipse, top_dot_angle):
     dot_id = 0
     if black_at_angle(hsv_img, ellipse, top_dot_angle + 67.25):
@@ -225,6 +243,9 @@ def decode_tag_id(hsv_img, ellipse, top_dot_angle):
     return dot_id
 
 
+# Finds the coordinates of the center of the marking on the outside of the tag,
+# in the immage hsv_img, with ellipse being the centre of the tag, given an initial
+# estimate of its position in terms of scale and angle from the major axis of the ellipse
 def find_dot_coords(hsv_img, ellipse, estimated_dot_angle, estimated_dot_scale, debug_text):
     angle, scale = find_dot_centre(hsv_img, ellipse, estimated_dot_angle, estimated_dot_scale, debug_text)
     if angle is None:
@@ -232,15 +253,9 @@ def find_dot_coords(hsv_img, ellipse, estimated_dot_angle, estimated_dot_scale, 
     return calc_point_coords(ellipse, angle, scale)
 
 
-# Given a list of arrays, flattens them and returns a single array
-def flatten(arr):
-    new_arr = []
-    for a in arr:
-        for e in a:
-            new_arr.append(e)
-    return new_arr
-
-
+# Given a set of pxl_pts which are the coordinates of the markings on the tag,
+# the camera matrix and the vector of distortion coefficients,
+# return the rotation and translation vector of the tag in 3d space
 def tag_solve_pnp(pxl_pts, cam_mat, cam_dist):
     bottom_dots_x = CM_TO_DOT_CENTER * math.sin(math.pi / 8)
     bottom_dots_z = CM_TO_DOT_CENTER * math.cos(math.pi / 8)
@@ -256,16 +271,8 @@ def tag_solve_pnp(pxl_pts, cam_mat, cam_dist):
     return rot, obj_3d_coords
 
 
-def display_images(img1, img2):
-    cv2.imshow('cam input', img1)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        raise Exception("display cancelled 1")
-
-    cv2.imshow('cam input with highlighted tag', img2)
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        raise Exception("display cancelled 2")
-
-
+# Finds and returns rotation and translation vector of all visible tags
+# See README for full description
 def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
     hsv_img = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
 
@@ -310,10 +317,10 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
             top_dot_angle = first_dot_angle
 
-            while not (black_at_angle(hsv_img, e, top_dot_angle, distance=first_dot_scale) and
-                       (black_at_angle(hsv_img, e, top_dot_angle + 180, distance=first_dot_scale) or
-                       black_at_angle(hsv_img, e, top_dot_angle + 178, distance=first_dot_scale) or
-                       black_at_angle(hsv_img, e, top_dot_angle + 182, distance=first_dot_scale))) \
+            while not (black_at_angle(hsv_img, e, top_dot_angle, scale=first_dot_scale) and
+                       (black_at_angle(hsv_img, e, top_dot_angle + 180, scale=first_dot_scale) or
+                        black_at_angle(hsv_img, e, top_dot_angle + 178, scale=first_dot_scale) or
+                        black_at_angle(hsv_img, e, top_dot_angle + 182, scale=first_dot_scale))) \
                     and top_dot_angle < first_dot_angle + 360:
                 top_dot_angle += ANGLE_BETWEEN_DOTS
 
@@ -328,9 +335,9 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 first_dot_scale = temp_scale
                 top_dot_angle = temp_angle
 
-            if black_at_angle(hsv_img, e, top_dot_angle + 90, distance=first_dot_scale):
+            if black_at_angle(hsv_img, e, top_dot_angle + 90, scale=first_dot_scale):
                 top_dot_angle += 90
-            elif black_at_angle(hsv_img, e, top_dot_angle - 90, distance=first_dot_scale):
+            elif black_at_angle(hsv_img, e, top_dot_angle - 90, scale=first_dot_scale):
                 top_dot_angle -= 90
             else:
                 if debug_txt:
