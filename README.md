@@ -50,3 +50,20 @@ All test scripts require replacing `mtx.npy` and `dist.npy` with the camera matr
 + `color_tag_tracker_playback_test.py`
   - Takes input from video file, prints results of `find_tags`.
   - Video file path given as command line argument.
+
+## Possible future development
++ Use scale of found markings when decoding id of tag - minor
++ Incorporate undistorted image into tag finding process - major
+    + It's possible to get an undistorted version of the input image using the camera matrix and distortion coefficents
+    + Currently the decoding fails sometimes as due to distortion in image an ellipse cannot be properly fit. Using the
+    undistorted image may be able to fix this.
+    + Possible solution outline:
+        + Undistort the image with cam_mat and cam_dist
+        + Fit ellipse in undistorted image
+        + Find centre of markings on tag in undistorted image
+        + Map coordinates of markings in undistorted image to coordinates in distorted image
+        + Use distorted coordinates with tag_solve_pnp as normal
+    + Possibly useful opencv functions:
+        + remap
+        + initUndistortRectifyMap
+        + undistort
