@@ -1,17 +1,12 @@
 import cv2
 import numpy as np
 import math
-import time
 
 white_low = np.array([0, 0, 190])
 white_high = np.array([255, 100, 255])
 
-# TODO generalise ranges later
 green_low = np.array([35, 50, 75])
 green_high = np.array([85, 255, 255])
-
-blue_low = np.array([75, 75, 128])
-blue_high = np.array([105, 255, 255])
 
 ELLIPSE_TO_DOTS_SCALE = 1.25
 
@@ -293,7 +288,6 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
     white_ellipses = find_white_ellipses(hsv_img)
 
     found_tags = []
-    # attempt = -1
     for contour in col_contours:
         if len(contour) < 10:
             if debug_txt:
@@ -309,7 +303,7 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
             ellipses_to_test = [matched_ellipse, coloured_ellipse]
 
         for e in ellipses_to_test:
-            # attempt += 1
+
             first_dot_angle, first_dot_scale = find_first_dot(hsv_img, e, debug_txt)
             if first_dot_angle is None:
                 continue
@@ -346,11 +340,7 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
                 continue
 
             if not check_bottom_of_tag(hsv_img, e, top_dot_angle, first_dot_scale):
-                # if attempt < 2:
-                #     highlight_debug = img.copy()
-                #     cv2.ellipse(highlight_debug, e, (0, 255, 255))
-                #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle, first_dot_scale), 3, (0, 0, 255))
-                # Try to recenter on top dot, to improve decoding
+
                 top_dot_angle, first_dot_scale = find_dot_centre(hsv_img, e, top_dot_angle, init_scale=first_dot_scale,
                                                                  debug_txt=debug_txt)
 
@@ -362,17 +352,6 @@ def find_tags(img, cam_mat, cam_dist, debug_txt=False, display_img=False):
 
                 if not check_bottom_of_tag(hsv_img, e, top_dot_angle, first_dot_scale):
                     if debug_txt:
-                        # if attempt < 2:
-                        #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle, first_dot_scale), 3, (255, 0, 0))
-                        #
-                        #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 112.5, first_dot_scale), 3, (255, 255, 0))
-                        #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 135, first_dot_scale), 3, (255, 255, 0))
-                        #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 157.5, first_dot_scale), 3, (255, 255, 0))
-                        #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 180, first_dot_scale), 3, (255, 255, 0))
-                        #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 202.5, first_dot_scale), 3, (255, 255, 0))
-                        #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 225, first_dot_scale), 3, (255, 255, 0))
-                        #     cv2.circle(highlight_debug, calc_point_coords(e, top_dot_angle + 247.5, first_dot_scale), 3, (255, 255, 0))
-                        #     cv2.imshow(F'temp_test{time.time()}', highlight_debug)
                         print("Failed to decode tag, bottom of tag not valid.")
                         print("Found to be invalid before and after recentering top dot")
                     continue
