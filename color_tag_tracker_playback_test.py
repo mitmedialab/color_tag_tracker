@@ -19,16 +19,19 @@ tags_found = 0
 start_time = time.time()
 
 while video.isOpened():
+    # Load image from video file
     ret, image = video.read()
 
     if not ret:
         break
 
+    # Attempt to find tag in image
     tags = find_tags(image, cam_mtx, cam_dist, display_img=True)
 
     frame_count += 1
 
     if len(tags) == 0:
+        # OPTIONAL CODE, uncomment so can save images where it fails to find a tag
         # response = input()
         # if response != '':
         #     cv2.imwrite(F'test_images/test_image{response}.jpg', image)
@@ -36,6 +39,7 @@ while video.isOpened():
 
     tags_found += 1
 
+    # If successful, print pose of first tag
     tag_id, r_vec, t_vec = tags[0]
     print('Tag id: ' + str(tag_id))
     print('Rotation vector:')
